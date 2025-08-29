@@ -11,8 +11,8 @@
   style-src 'self' 'unsafe-inline';
   img-src 'self' data: blob:;
   font-src 'self' data:;
-  connect-src 'self' blob: data:;
-  media-src   'self' blob: data:;
+  connect-src 'self' https://hls-proxy-iphq.onrender.com blob: data:;
+  media-src   'self' https://hls-proxy-iphq.onrender.com blob: data:;
   frame-src 'self' https://www.youtube.com https://player.vimeo.com;
   worker-src 'self' blob:;
   base-uri 'self';
@@ -147,7 +147,6 @@
     </div>
   </div>
 
-  <!-- مصادر البث عبر Render -->
   <script>
   const R = 'https://hls-proxy-iphq.onrender.com'; // دومين البروكسي
   window.sources = {
@@ -160,6 +159,7 @@
     cam6:  `${R}/hls/live6/playlist.m3u8`
   };
 </script>
+
 
   <!-- كود المشغّل (كما هو عندك) -->
   <script>
