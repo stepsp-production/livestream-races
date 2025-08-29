@@ -6,10 +6,10 @@ import https from "https";
 import http from "http";
 import { URL } from "url";
 
-const ORIGIN_BASE = process.env.ORIGIN_BASE || "http://46.152.153.249"; // فضّل http هنا
+// فضّل http هنا طالما شهادة المصدر غير موثوقة/تُعيد إلى http
+const ORIGIN_BASE = process.env.ORIGIN_BASE || "http://46.152.153.249";
 const PORT = process.env.PORT || 10000;
-
-// لو اضطررت تبقي https بالمصدر وشهادته سيئة: ALLOW_INSECURE_TLS=true
+// لو استخدمت https بالمصدر وشهادته سيئة: ALLOW_INSECURE_TLS=true
 const ALLOW_INSECURE_TLS = String(process.env.ALLOW_INSECURE_TLS || "true") === "true";
 
 const app = express();
@@ -27,6 +27,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// صفحة بسيطة للتأكد أن الخدمة تعمل على Render (اختياري لكنها مفيدة)
+app.get("/", (req, res) => {
+  res.type("text/plain").send("livestream-races proxy is up. Try /player?src=/hls/live2/playlist.m3u8");
+});
+
 const insecureHttpsAgent = new https.Agent({ rejectUnauthorized: !ALLOW_INSECURE_TLS });
 
 function requestOnce(urlStr, headers) {
@@ -37,7 +42,7 @@ function requestOnce(urlStr, headers) {
   const opts = {
     method: "GET",
     headers,
-    agent: isHttps ? insecureHttpsAgent : undefined,
+    agent: isHttps ? insecureHttpsAgent : undefined
   };
 
   return new Promise((resolve, reject) => {
@@ -54,7 +59,6 @@ async function fetchWithRedirects(urlStr, headers, maxRedirects = 5) {
     const up = await requestOnce(current, headers);
     const sc = up.statusCode || 0;
     if (sc >= 300 && sc < 400 && up.headers.location) {
-      // إعادة توجيه
       const loc = up.headers.location;
       up.resume(); // تخلّص من الاستجابة قبل المتابعة
       current = new URL(loc, current).toString();
@@ -66,18 +70,23 @@ async function fetchWithRedirects(urlStr, headers, maxRedirects = 5) {
 }
 
 function rewriteManifest(text, basePath) {
-  return text.split("\n").map((line) => {
-    const t = line.trim();
-    if (!t || t.startsWith("#")) return line;
-    if (/^https?:\/\//i.test(t)) {
-      try {
-        const url = new URL(t);
-        return `${basePath}${url.pathname}${url.search || ""}`;
-      } catch { return line; }
-    }
-    const parent = basePath.replace(/\/[^/]*$/, "/");
-    return parent + t;
-  }).join("\n");
+  return text
+    .split("\n")
+    .map((line) => {
+      const t = line.trim();
+      if (!t || t.startsWith("#")) return line;
+      if (/^https?:\/\//i.test(t)) {
+        try {
+          const url = new URL(t);
+          return `${basePath}${url.pathname}${url.search || ""}`;
+        } catch {
+          return line;
+        }
+      }
+      const parent = basePath.replace(/\/[^/]*$/, "/");
+      return parent + t;
+    })
+    .join("\n");
 }
 
 app.get("/hls/*", async (req, res) => {
@@ -86,10 +95,10 @@ app.get("/hls/*", async (req, res) => {
     const headers = {
       ...req.headers,
       host: new URL(ORIGIN_BASE).host,
-      ...(req.headers.range ? { Range: req.headers.range } : {}),
+      ...(req.headers.range ? { Range: req.headers.range } : {})
     };
 
-    const { up, finalUrl } = await fetchWithRedirects(upstreamUrl, headers);
+    const { up } = await fetchWithRedirects(upstreamUrl, headers);
 
     // تمرير رؤوس مهمة
     if (up.headers["content-type"]) res.set("Content-Type", up.headers["content-type"]);
@@ -123,6 +132,7 @@ app.get("/hls/*", async (req, res) => {
   }
 });
 
+// صفحة اختبار فيديو
 app.get("/player", (req, res) => {
   const src = req.query.src || "/hls/live/playlist.m3u8";
   res.type("html").send(`<!doctype html>
@@ -136,12 +146,14 @@ app.get("/player", (req, res) => {
 <script>
 const src=${JSON.stringify(src)};
 const v=document.getElementById('v');
-if(Hls.isSupported()){
+if(window.Hls && Hls.isSupported()){
   const h=new Hls();
   h.on(Hls.Events.ERROR,(e,d)=>console.log('HLS error',d));
   h.loadSource(src);
   h.attachMedia(v);
-}else{ v.src=src; }
+}else{
+  v.src=src;
+}
 </script>
 </body></html>`);
 });
