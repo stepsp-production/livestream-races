@@ -1,48 +1,32 @@
-// --- imports (keep these only once) ---
 import express from "express";
 import morgan from "morgan";
 import compression from "compression";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import https from "https";
 import http from "http";
-import path from "node:path";            // <— ONE path import
-import { fileURLToPath } from "node:url"; // for __dirname in ESM
+import { URL } from "url";
 
-// --- constants ---
+// --- resolve __dirname (ESM) ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.resolve(process.cwd()); // safe on Render
+
+// origin is your camera server (HTTP preferred because the cert is bad)
 const ORIGIN_BASE = process.env.ORIGIN_BASE || "http://46.152.153.249";
 const PORT = process.env.PORT || 10000;
 const ALLOW_INSECURE_TLS = String(process.env.ALLOW_INSECURE_TLS || "true") === "true";
 
-// --- ESM __dirname shim ---
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
-
-// --- app init & static files ---
 const app = express();
-app.use(express.static(path.join(__dirname, "public")));  // serve index.html, css, js, etc.
 app.use(morgan("tiny"));
 app.use(compression());
 app.use(cors());
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "*");
-  if (/\.(m3u8)$/i.test(req.path)) {
-    res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
-  } else if (/\.(ts|m4s)$/i.test(req.path)) {
-    res.setHeader("Content-Type", "video/mp2t");
-  }
-  next();
-});
 
-// health page – optional
-app.get("/", (req, res) => {
-  res.type("text/plain").send("livestream-races is up. Try /player?src=/hls/live2/playlist.m3u8");
-});
+// serve frontend from /public
+app.use(express.static(path.join(__dirname, "public")));
 
-// ---- keep the rest of your proxy code exactly as you have it ----
-// (insecureHttpsAgent, requestOnce, fetchWithRedirects, rewriteManifest,
-//  the /hls/* route, and /player)
-// ---------------------------------------------------------------
+// … (keep the rest of the proxy code you already have: headers, redirects,
+// rewriteManifest, app.get("/hls/*") proxy route, app.get("/player") test page, etc.)
 
 app.listen(PORT, () => {
   console.log("Server on", PORT, "→ origin:", ORIGIN_BASE, "insecureTLS:", ALLOW_INSECURE_TLS);
