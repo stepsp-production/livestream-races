@@ -140,8 +140,8 @@
   </div>
 
 <script>
-  // Use the current Render domain automatically
-  const R = location.origin;
+  // put the EXACT external URL of your Web Service here (NOT the static site)
+  const R = 'https://https://livestream-races.onrender.com';
 
   window.sources = {
     main: `${R}/hls/live/playlist.m3u8`,
@@ -149,12 +149,10 @@
     cam2: `${R}/hls/live2/playlist.m3u8`,
     cam3: `${R}/hls/live3/playlist.m3u8`,
     cam4: `${R}/hls/live4/playlist.m3u8`,
-    cam5: `${R}/hls/live5/playlist.m3u8`,   // leave only if it exists
-    cam6: `${R}/hls/live6/playlist.m3u8`
+    cam5: `${R}/hls/live5/playlist.m3u8`,
+    cam6: `${R}/hls/live6/playlist.m3u8`,
   };
 </script>
-
-
 
   <!-- كود المشغّل (كما هو عندك) -->
   <script>
