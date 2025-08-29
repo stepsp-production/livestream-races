@@ -4,16 +4,18 @@
   <meta charset="UTF-8" />
   <title>Universal Multi-Cam Player (Unified Controls + No Center Loader)</title>
 
-const R = '';
+<script>
   window.sources = {
-  main:  `/hls/live/playlist.m3u8`,
-  cam1:  `/hls/lastone/playlist.m3u8`,
-  cam2:  `/hls/live2/playlist.m3u8`,
-  cam3:  `/hls/live3/playlist.m3u8`,
-  cam4:  `/hls/live4/playlist.m3u8`,
-  cam5:  `/hls/live5/playlist.m3u8`,
-  cam6:  `/hls/live6/playlist.m3u8`
-};
+    main:  '/hls/live/playlist.m3u8',
+    cam1:  '/hls/lastone/playlist.m3u8',
+    cam2:  '/hls/live2/playlist.m3u8',
+    cam3:  '/hls/live3/playlist.m3u8',
+    cam4:  '/hls/live4/playlist.m3u8',
+    cam5:  '/hls/live5/playlist.m3u8',
+    cam6:  '/hls/live6/playlist.m3u8'
+  };
+</script>
+
 
   <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -91,7 +93,6 @@ const R = '';
     <div id="mainPreview" class="videoFrame" title="انقر للتكبير/التصغير" aria-label="المعاينة الرئيسية المصغّرة"></div>
     <div class="hint">انقر على المعاينة للتكبير • أو اضغط F</div>
 
-    <!-- بوابة تشغيل أولية -->
     <div id="gatePlay" role="dialog" aria-modal="true" aria-label="بدء التشغيل">
       <div class="gate-card">
         <div class="icon">▶</div>
@@ -103,7 +104,6 @@ const R = '';
       </div>
     </div>
 
-    <!-- أدوات أعلى يسار -->
     <div id="utilityControls">
       <div class="group">
         <button id="btnSplit" aria-label="تبديل وضع التقسيم">تقسيم الشاشة<span class="sub">S</span></button>
@@ -118,7 +118,6 @@ const R = '';
       <span class="badge">اختصارات: Space/Enter، M، S، F</span>
     </div>
 
-    <!-- شريط تحكّم موحّد -->
     <div id="globalControls" class="hidden" role="group" aria-label="تحكم موحّد">
       <button id="gBack" title="تأخير 5 ثوانٍ" aria-label="تأخير 5 ثوانٍ">⏪ 5s</button>
       <button id="gPlay" title="تشغيل/إيقاف" aria-label="تشغيل/إيقاف">⏯</button>
@@ -127,12 +126,10 @@ const R = '';
       <div id="timeLabel">00:00 / 00:00</div>
     </div>
 
-    <!-- مؤشر مزامنة صغير -->
     <div id="syncStatus" class="hidden" aria-live="polite">
       <div class="dot"></div><div>جاري المزامنة…</div>
     </div>
 
-    <!-- أزرار الكاميرات -->
     <div id="camControls" role="toolbar" aria-label="اختيار الكاميرات">
       <button data-cam="cam1">Cam1</button>
       <button data-cam="cam2">Cam2</button>
@@ -143,7 +140,6 @@ const R = '';
     </div>
   </div>
 
-  <!-- مصادر البث عبر Render -->
 <script>
   const R = 'https://hls-proxy-iphq.onrender.com';
 window.sources = {
@@ -158,7 +154,6 @@ window.sources = {
 
 </script>
 
-  <!-- كود المشغّل (كما هو عندك) -->
   <script>
     let mainPlayer, activePlayer;
     let currentCam = "cam2";
