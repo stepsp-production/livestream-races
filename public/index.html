@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Universal Multi-Cam Player (Mobile Landscape Tuned) — Optimized HLS</title>
+  <title>Universal Multi-Cam Player (Optimized HLS - Fixed)</title>
 
   <!-- Players -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -12,636 +12,139 @@
   <script src="https://player.vimeo.com/api/player.js"></script>
 
   <style>
-    :root{
-      --btn-bg:#e53935; --btn-bg-h:#d32f2f; --btn-bg-a:#b71c1c; --btn-txt:#fff;
-      --btn-ring:rgba(211,47,47,.28);
-      --panel-bg:#0b0b0fbb; --panel-bd:#ffffff26;
-      --accent:#40c4ff;
-    }
-
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;background:#000;overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-
-    #playerContainer{position:relative;width:100vw;height:100vh}
-    .videoFrame{position:absolute;top:0;right:0;width:100%;height:100%;background:#000;overflow:hidden}
-
-    /* mini preview (audio source) */
-    #mainPreview{
-      position:absolute;top:18px;right:25px;width:20%;height:20%;
-      z-index:5;border:2px solid #fff2;border-radius:12px;cursor:pointer;
-      transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s
-    }
-    #mainPreview:hover{box-shadow:0 10p  x 30px #0008}
-
-    /* split */
-    .split #mainPreview{top:0;right:0;left:auto;width:50%;height:100%;border-radius:0;border-width:0;cursor:default}
-    .split #activeCam{top:0;left:0;right:auto;width:50%;height:100%}
-    .split.fill #mainPreview video,.split.fill #activeCam video{object-fit:cover}
-    .split.fill #mainPreview iframe,.split.fill #activeCam iframe{position:absolute;inset:0;margin:auto;width:120%;height:120%}
-
-    .main-full #mainPreview{top:0;right:0;width:100%;height:100%;z-index:6;border:0;border-radius:0;cursor:zoom-out}
-    .main-full #activeCam{display:none}
-
-    .hint{position:absolute;top:20px;right:25px;z-index:7;background:#000a;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;border:1px solid #fff2}
-    .split .hint,.main-full .hint{display:none}
-
-    /* panels */
-    #utilityControls,#camControls,#globalControls,#syncStatus{position:absolute;z-index:8;display:flex;gap:8px;flex-wrap:wrap;transition:opacity .18s,transform .18s}
-
-    /* top-left tools (desktop default) */
-    #utilityControls{
-      top:12px;left:14px;background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);
-      backdrop-filter:blur(8px);align-items:center
-    }
-    #utilityControls .group{display:flex;gap:8px;align-items:center}
-    .divider{width:1px;height:26px;background:var(--panel-bd);margin:0 6px;border-radius:2px}
-
-    /* global scrubber (center bottom) */
-    #globalControls{
-      bottom:70px;left:50%;transform:translateX(-50%);
-      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);
-      backdrop-filter:blur(8px);align-items:center;min-width:320px
-    }
-    #globalControls.hidden{display:none}
-
-    #scrub{-webkit-appearance:none;appearance:none;width:320px;height:6px;border-radius:999px;background:#ffffff30;outline:none;margin:0 8px}
-    #scrub::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #0006;cursor:pointer}
-    #timeLabel{color:#fff;font-size:12px;min-width:108px;text-align:center}
-
-    /* camera buttons (desktop default) */
-    #camControls{
-      bottom:14px;left:50%;transform:translateX(-50%);
-      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);backdrop-filter:blur(8px)
-    }
-
-    #syncStatus{
-      bottom:122px;left:50%;transform:translateX(-50%);
-      background:#08131fbb;color:#e6f3ff;border:1px solid var(--panel-bd);
-      padding:6px 10px;border-radius:10px;font-size:12px;align-items:center;gap:6px
-    }
-    #syncStatus.hidden{display:none}
-    .dot{width:10px;height:10px;border-radius:50%;border:2px solid #8fd3ff;border-top-color:transparent;animation:spin .8s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-
-    /* split: keep scrub bottom center as well */
-    .split #camControls{top:50%;left:12px;bottom:auto;transform:translateY(-50%);flex-direction:column;align-items:stretch}
-    .split #globalControls{bottom:70px;left:50%;transform:translateX(-50%);top:auto}
-    .split #syncStatus{bottom:122px;left:50%;transform:translateX(-50%);top:auto}
-
-    /* buttons look */
-    button{
-      -webkit-tap-highlight-color:transparent;appearance:none;border:0;outline:0;cursor:pointer;
-      background:var(--btn-bg);color:var(--btn-txt);padding:11px 14px;font-size:13px;line-height:1;font-weight:800;
-      border-radius:12px;letter-spacing:.2px;min-width:92px;position:relative;
-      box-shadow:0 8px 18px #000a,0 0 0 0 var(--btn-ring);
-      transition:transform .12s,box-shadow .12s,background .12s,opacity .12s,filter .12s;
-      opacity:.35;
-    }
-    body.ui-awake button{opacity:1}
-    button:hover{background:var(--btn-bg-h);box-shadow:0 12px 26px #000c,0 0 0 6px var(--btn-ring)}
-    button:active{background:var(--btn-bg-a);transform:translateY(1px)}
-    button .sub{display:block;font-weight:600;font-size:10px;opacity:.85;margin-top:4px}
-    .loading{opacity:.85;pointer-events:none;filter:saturate(.85)}
-    .loading::after{content:"";position:absolute;inset:auto 8px 8px auto;width:16px;height:16px;border-radius:50%;border:2px solid #fff8;border-top-color:transparent;animation:spin .8s linear infinite}
-
-    #gatePlay{position:absolute;inset:0;z-index:7;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,rgba(0,0,0,.55),rgba(0,0,0,.2));backdrop-filter:blur(2px)}
+    body {margin:0; background:#000; height:100vh; overflow:hidden;}
+    #playerContainer{position:relative;width:100%;height:100%}
+    .videoFrame{position:absolute;top:0;left:0;width:100%;height:100%;background:#000}
+    #mainPreview{position:absolute;top:20px;right:20px;width:25%;height:25%;border:2px solid #fff;cursor:pointer;z-index:5}
+    #camControls{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:6;}
+    #camControls button{margin:3px;padding:8px 12px;background:#e53935;color:#fff;border:0;border-radius:8px;cursor:pointer}
+    #gatePlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000a;z-index:10}
     #gatePlay.hidden{display:none}
-    .gate-card{background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:18px;padding:18px 20px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.45)}
-    .icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--panel-bd);color:#fff;background:#111a;font-size:18px}
-    #startBtn{min-width:160px}
-    #zoomBtn{min-width:auto;padding:10px 12px}
-    .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bd);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
-
-    
-    /* ===== Mobile (landscape) tuning ===== */
-    @media (orientation: landscape) and (max-width: 900px){
-      /* 1) Preview much larger (about ~2x previous), keep clear of controls */
-      #mainPreview{
-        width:45%;   /* كان ~38% → ضاعفناه تقريبًا */
-        height:42%;
-        left:12px; top:12px;
-        border-width:1.5px;border-radius:10px; z-index:6;
-      }
-      /* نخفي التلميح على الموبايل */
-      .hint{display:none}
-
-      /* 2) Make top tools tiny & move to very left-top */
-      #utilityControls{
-        top:14px; left:10px;
-        padding:8px; gap:10px;
-      }
-      #utilityControls .group{gap:6px}
-      /* تصغير ثلاثة أزرار: تقسيم/ملء/صوت */
-      #btnSplit, #btnFill, #btnSound{
-        padding:4px 4px; min-width:15px; font-size:9px; border-radius:10px;
-      }
-      /* زر العدسة صغير أيضًا */
-      #zoomBtn{padding:4px 4px; min-width:auto}
-
-      /* 3) Camera buttons vertically at left-center, smaller */
-      #camControls{
-        top:50%; left:8px; bottom:auto; transform:translateY(-50%);
-        flex-direction:column; align-items:stretch;
-        padding:8px; gap:6px;
-      }
-      #camControls button{
-        min-width:86px; font-size:10px; padding:8px 10px; border-radius:10px;
-      }
-
-      /* 4) Global scrubber at very bottom center (replaces cameras place) */
-      #globalControls{
-        bottom:10px; left:50%; transform:translateX(-50%);
-        padding:8px 10px; min-width:260px;
-      }
-      #scrub{width:220px}
-
-      /* 5) Sync badge just above scrubber */
-      #syncStatus{bottom:58px}
-
-      /* split mode keeps same positions (scrubber في الأسفل) */
-      .split #globalControls{bottom:10px}
-      .split #syncStatus{bottom:58px}
-    }
-
-        /* شاشة صغيرة جدًا */
- @media (orientation: landscape) and (max-width: 640px){
-      #scrub{width:190px}
-      #camControls button{min-width:80px}
-      #btnSplit, #btnFill, #btnSound{min-width:58px;font-size:10px;padding:6px 7px}
-      #mainPreview{width:76%;height:46%}
-    }
-   
+    #startBtn{padding:12px 20px;border-radius:10px;background:#e53935;color:#fff;border:0;font-weight:bold;cursor:pointer}
+    #syncStatus{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);background:#000a;color:#fff;padding:6px 10px;border-radius:6px;z-index:7;}
+    #syncStatus.hidden{display:none}
   </style>
 </head>
 <body>
-  <div id="playerContainer" aria-label="مشغّل متعدد الكاميرات">
-    <div id="activeCam" class="videoFrame" aria-label="الكاميرا النشطة"></div>
-    <div id="mainPreview" class="videoFrame" title="انقر للتكبير/التصغير" aria-label="المعاينة الرئيسية المصغّرة"></div>
-    <div class="hint">انقر على المعاينة للتكبير • أو اضغط F</div>
-
-    <!-- gate -->
-    <div id="gatePlay" role="dialog" aria-modal="true" aria-label="بدء التشغيل">
-      <div class="gate-card">
-        <div class="icon">▶</div>
-        <div>
-          <div style="color:#fff;font-weight:800;margin-bottom:6px">ابدأ التشغيل</div>
-          <div style="font-size:12px;color:#eaeaf0b3">سيبدأ تشغيل الخط الرئيسي مع المزامنة • الصوت مكتوم افتراضيًا</div>
-        </div>
-        <button id="startBtn" aria-label="ابدأ التشغيل الآن">تشغيل/بدء المزامنة<span class="sub">Space أو Enter</span></button>
-      </div>
-    </div>
-
-    <!-- tools -->
-    <div id="utilityControls">
-      <div class="group">
-        <button id="btnSplit" aria-label="تبديل وضع التقسيم">تقسيم الشاشة<span class="sub">S</span></button>
-        <button id="btnFill" aria-label="تبديل تعبئة الفيديو">ملء المحتوى</button>
-      </div>
-      <span class="divider"></span>
-      <div class="group">
-        <button id="btnSound" aria-label="تشغيل/إيقاف الصوت">تشغيل/إيقاف الصوت<span class="sub">M</span></button>
-        <button id="zoomBtn" title="تكبير/تصغير المعاينة" aria-label="تكبير المعاينة">🔍</button>
-      </div>
-      <span class="divider"></span>
-      <span class="badge">اختصارات: Space/Enter، M، S، F</span>
-    </div>
-
-    <!-- global scrubber -->
-    <div id="globalControls" class="hidden" role="group" aria-label="تحكم موحّد">
-      <button id="gBack" title="تأخير 5 ثوانٍ" aria-label="تأخير 5 ثوانٍ">⏪ 5s</button>
-      <button id="gPlay" title="تشغيل/إيقاف" aria-label="تشغيل/إيقاف">⏯</button>
-      <button id="gFwd"  title="تقديم 5 ثوانٍ" aria-label="تقديم 5 ثوانٍ">5s ⏩</button>
-      <input id="scrub" type="range" min="0" max="0" value="0" step="0.01" aria-label="شريط التقدم">
-      <div id="timeLabel">00:00 / 00:00</div>
-    </div>
-
-    <!-- sync badge -->
-    <div id="syncStatus" class="hidden" aria-live="polite">
-      <div class="dot"></div><div>جاري المزامنة…</div>
-    </div>
-
-    <!-- cameras -->
-    <div id="camControls" role="toolbar" aria-label="اختيار الكاميرات">
+  <div id="playerContainer">
+    <div id="activeCam" class="videoFrame"></div>
+    <div id="mainPreview" class="videoFrame"></div>
+    <div id="gatePlay"><button id="startBtn">ابدأ التشغيل</button></div>
+    <div id="camControls">
       <button data-cam="cam1">Cam1</button>
       <button data-cam="cam2">Cam2</button>
-      <button data-cam="cam3">Cam4</button>
-      <button data-cam="cam4">Cam9</button>
-      <button data-cam="cam5">Sineflex</button>
-      <button data-cam="cam6">Drone</button>
+      <button data-cam="cam3">Cam3</button>
+      <button data-cam="cam4">Cam4</button>
     </div>
+    <div id="syncStatus" class="hidden">جاري المزامنة…</div>
   </div>
 
-  <!-- sources through Render proxy -->
   <script>
     window.sources = {
       main:  `/hls/live/playlist.m3u8`,
       cam1:  `/hls/lastone/playlist.m3u8`,
       cam2:  `/hls/live2/playlist.m3u8`,
       cam3:  `/hls/live3/playlist.m3u8`,
-      cam4:  `/hls/live4/playlist.m3u8`,
-      cam5:  `/hls/live5/playlist.m3u8`,
-      cam6:  `/hls/live6/playlist.m3u8`
+      cam4:  `/hls/live4/playlist.m3u8`
     };
-  </script>
 
-  <!-- player logic -->
-  <script>
     let mainPlayer, activePlayer;
     let currentCam = "cam1";
-    let splitMode = 0, isMainFull = false, fillMode = false, started = false, driftTimer = null;
+    const mainContainer=document.getElementById('mainPreview');
+    const camContainer=document.getElementById('activeCam');
+    const gatePlay=document.getElementById('gatePlay');
+    const startBtn=document.getElementById('startBtn');
+    const camControls=document.getElementById('camControls');
+    const syncStatus=document.getElementById('syncStatus');
 
-    const root = document.getElementById('playerContainer');
-    const mainContainer = document.getElementById('mainPreview');
-    const camContainer  = document.getElementById('activeCam');
-    const gatePlay = document.getElementById('gatePlay');
-    const startBtn = document.getElementById('startBtn');
-    const camControls = document.getElementById('camControls');
-    const btnSplit = document.getElementById('btnSplit');
-    const btnFill  = document.getElementById('btnFill');
-    const btnSound = document.getElementById('btnSound');
-    const zoomBtn  = document.getElementById('zoomBtn');
-    const globalControls = document.getElementById('globalControls');
-    const gPlay = document.getElementById('gPlay');
-    const gBack = document.getElementById('gBack');
-    const gFwd  = document.getElementById('gFwd');
-    const scrub = document.getElementById('scrub');
-    const timeLabel = document.getElementById('timeLabel');
-    const syncStatus = document.getElementById('syncStatus');
+    const hlsMap=new WeakMap();
 
-    function ytId(u){const m1=u.match(/[?&]v=([^&]+)/);if(m1)return m1[1];const m2=u.match(/youtu\.be\/([^?&\/]+)/);if(m2)return m2[1];const m3=u.match(/youtube\.com\/live\/([^?&\/]+)/);if(m3)return m3[1];const m4=u.match(/embed\/([^?&\/]+)/);if(m4)return m4[1];return u.split('/').pop();}
-    function vimeoEmbed(u,p){const m=u.match(/vimeo\.com\/(?:video\/)?(\d+)/);const id=m?m[1]:'';const q=new URLSearchParams(p||{}).toString();return `https://player.vimeo.com/video/${id}?${q}`;}
+    function destroyAttachedHls(videoEl){
+      const inst=hlsMap.get(videoEl);
+      if(inst){try{inst.destroy();}catch(e){} hlsMap.delete(videoEl);}
+    }
 
-    /* ============ تحسينات HLS للبث المباشر ============ */
-    const hlsMap = new WeakMap();
-    const HLS_BASE_CONFIG = {
-      enableWorker: true,
-      lowLatencyMode: true,
-      backBufferLength: 30,
-      maxBufferLength: 10,
-      maxMaxBufferLength: 20,
-      maxBufferHole: 0.4,
-      liveSyncDuration: 3,
-      liveMaxLatencyDuration: 8,
-      liveDurationInfinity: true,
-      startPosition: -1,
-      // قلّل النَّجْدَة (nudge) حتى لا نحصل على قفزات عند امتلاء البافر
-      nudgeOffset: 0.1,
-      nudgeMaxRetry: 3,
-      // إعادة المحاولات
-      fragLoadingRetryDelay: 800,
-      fragLoadingMaxRetry: 6,
-      manifestLoadingRetryDelay: 1200,
-      manifestLoadingMaxRetry: 10,
-      levelLoadingRetryDelay: 800,
-      levelLoadingMaxRetry: 6,
-      capLevelToPlayerSize: true,
-      progressive: true,
-      xhrSetup: function (xhr, url) {
-        xhr.setRequestHeader('Cache-Control', 'no-cache');
-        xhr.setRequestHeader('Pragma', 'no-cache');
-      }
-    };
-    function destroyAttachedHls(videoEl) {
-      const inst = hlsMap.get(videoEl);
-      if (inst) {
-        try { inst.destroy(); } catch(e) {}
-        hlsMap.delete(videoEl);
+    function clearContainer(c){
+      while(c.firstChild){
+        const n=c.firstChild;
+        if(n.tagName==='VIDEO'){
+          try{n.pause()}catch(e){}
+          destroyAttachedHls(n);
+        }
+        c.removeChild(n);
       }
     }
-    function attachNativeRetry(video, src) {
-      let retry = 0, maxRetry = 6, baseDelay = 800;
-      const retryLoad = () => {
-        if (retry >= maxRetry) return;
-        retry++;
-        const bust = (src.includes('?') ? '&' : '?') + 't=' + Date.now();
-        video.src = src + bust;
-        video.play().catch(()=>{});
+
+    function attachHls(video,url,isMain=false){
+      const cfg={
+        enableWorker:true,
+        lowLatencyMode:true,
+        liveSyncDuration:isMain?2.5:3,
+        liveMaxLatencyDuration:8,
+        maxBufferLength:15,
+        maxMaxBufferLength:30,
+        maxBufferHole:0.1,
+        capLevelToPlayerSize:true,
+        xhrSetup:(xhr)=>{xhr.setRequestHeader('Cache-Control','no-cache');xhr.setRequestHeader('Pragma','no-cache');}
       };
-      video.addEventListener('error', () => {
-        setTimeout(retryLoad, baseDelay * Math.pow(1.4, retry));
-      });
-    }
-    function attachHls(video, url, isMain=false) {
-      // سنختار بروفايل التشغيل اعتمادًا على نوع المانيفست
-      // LL-HLS: يحتوي على EXT-X-PART أو EXT-X-SERVER-CONTROL
-      let cfg = { ...HLS_BASE_CONFIG };
-
-      const hls = new Hls(cfg);
+      const hls=new Hls(cfg);
       hls.loadSource(url);
       hls.attachMedia(video);
-
-      // عند تحميل الليفل، إكشف خصائص المانيفست وعدّل الإعدادات ديناميكيًا
-      hls.on(Hls.Events.LEVEL_LOADED, (_, data) => {
-        const d = data && data.details;
-        if (!d) return;
-        const isLL = d.partList && d.partList.length || /SERVER-CONTROL/i.test(d.fragHint?.attrs || '') || d.canBlockReload || d.canSkipUntil;
-        const target = d.targetduration || 6;
-
-        if (isLL) {
-          // وضع LL-HLS — بافر صغير وكمون منخفض
-          hls.config.lowLatencyMode = true;
-          hls.config.liveSyncDuration = isMain ? 2 : 3;
-          hls.config.maxBufferLength = 8;
-        } else {
-          // HLS تقليدي — عطهِ بافر أكبر لتقليل التهنيج
-          hls.config.lowLatencyMode = false;
-          hls.config.liveSyncDuration = Math.min( target * 2.5, 12 );
-          hls.config.maxBufferLength = 18;
-          hls.config.maxMaxBufferLength = 30;
-          hls.config.maxBufferHole = 0.1;
-        }
-
-        if (isMain) {
-          // المسار الرئيسي دائمًا بافر أكبر بقليل من المعاينة
-          hls.config.liveSyncDuration = Math.max(2, hls.config.liveSyncDuration - 0.5);
-        }
+      hls.on(Hls.Events.MANIFEST_PARSED,()=>video.play().catch(()=>{}));
+      hls.on(Hls.Events.ERROR,(ev,data)=>{
+        if(!data.fatal) return;
+        if(data.type===Hls.ErrorTypes.NETWORK_ERROR){hls.startLoad();}
+        else if(data.type===Hls.ErrorTypes.MEDIA_ERROR){hls.recoverMediaError();}
+        else{destroyAttachedHls(video);attachHls(video,url,isMain);}
       });
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(()=>{}); });
-
-      // مراقبة التعثرات: إن حدثت Stalled، زِد البافر أو أعِد التزامن
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        const { type, details, fatal } = data || {};
-        // console.debug('[HLS]', type, details, fatal);
-        if (!fatal) {
-          if (details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
-            // ادفع لاعب المعاينة قليلاً للأمام لتجاوز الثغرة
-            try { video.currentTime += 0.25; } catch(e){}
-          }
-          return;
-        }
-        if (type === Hls.ErrorTypes.NETWORK_ERROR) {
-          try { hls.startLoad(); } catch(e) {}
-        } else if (type === Hls.ErrorTypes.MEDIA_ERROR) {
-          try { hls.recoverMediaError(); }
-          catch(e) { try { hls.swapAudioCodec(); hls.recoverMediaError(); } catch(_) {} }
-        } else {
-          try { hls.destroy(); } catch(e) {}
-          setTimeout(() => { destroyAttachedHls(video); attachHls(video, url, isMain); }, 1000);
-        }
-      });
-
-      // سجّل إحصاءات لمساعدتنا على التشخيص من الكونسول
-      hls.on(Hls.Events.FRAG_BUFFERED, (_, data) => {
-        const bw = Math.round(hls.bandwidthEstimate/1000);
-        // console.debug(`[HLS] bw≈${bw}kbps level=${hls.currentLevel} buf=${video.buffered.length? (video.buffered.end(0)-video.currentTime).toFixed(1):'0'}s`);
-      });
-
-      hlsMap.set(video, hls);
-      return hls;
-    }
-      const hls = new Hls(cfg);
-      hls.loadSource(url);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(()=>{});
-      });
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        const { type, details, fatal } = data || {};
-        if (!fatal) return;
-        if (type === Hls.ErrorTypes.NETWORK_ERROR) {
-          try { hls.startLoad(); } catch(e) {}
-        } else if (type === Hls.ErrorTypes.MEDIA_ERROR) {
-          try { hls.recoverMediaError(); }
-          catch(e) { try { hls.swapAudioCodec(); hls.recoverMediaError(); } catch(_) {} }
-        } else {
-          try { hls.destroy(); } catch(e) {}
-          const t = setTimeout(() => {
-            const v = video;
-            destroyAttachedHls(v);
-            attachHls(v, url, isMain);
-            clearTimeout(t);
-          }, 1200);
-        }
-      });
-      hlsMap.set(video, hls);
+      hlsMap.set(video,hls);
       return hls;
     }
 
-    /* استبدال clearContainer ليدمّر Hls أيضاً */
-    function clearContainer(c){ while(c.firstChild){ const n=c.firstChild; if(n.tagName==='VIDEO'){try{n.pause()}catch(e){} destroyAttachedHls(n);} c.removeChild(n);} }
-
-    /* استبدال createVideo لتفعيل إعدادات HLS المُحسّنة */
-    function createVideo(container, url, isMain=false){
+    function createVideo(container,url,isMain=false){
       clearContainer(container);
-      if(/youtube\.com|youtu\.be/i.test(url)){
-        const id = ytId(url); const div=document.createElement('div');
-        div.style.width='100%'; div.style.height='100%'; container.appendChild(div);
-        return new YT.Player(div,{videoId:id,playerVars:{autoplay:0,controls:0,rel:0,playsinline:1,muted:1}});
-      }
-      if(/vimeo\.com/i.test(url)){
-        const params={autoplay:0,muted:1,controls:0,playsinline:1,autopause:0};
-        const iframe=document.createElement('iframe'); iframe.src=vimeoEmbed(url,params);
-        iframe.setAttribute('allow','autoplay; fullscreen; picture-in-picture; encrypted-media'); iframe.allowFullscreen=true;
-        iframe.style.width='100%'; iframe.style.height='100%'; iframe.style.border='0'; container.appendChild(iframe);
-        return new Vimeo.Player(iframe,{autopause:false});
-      }
       const video=document.createElement('video');
-      video.autoplay=false; video.playsInline=true; video.controls=false; video.muted=true; video.preload='auto'; video.disableRemotePlayback = true;
-      video.style.width='100%'; video.style.height='100%';
-      video.style.objectFit=(splitMode===2||fillMode)?'cover':'contain';
+      video.autoplay=false;
+      video.playsInline=true;
+      video.controls=false;
+      video.muted=true;
+      video.style.width='100%';
+      video.style.height='100%';
       container.appendChild(video);
-
-      if(/\.m3u8(\?|$)/i.test(url)){
-        if(window.Hls && Hls.isSupported()){ attachHls(video, url, isMain); }
-        else { video.src=url; attachNativeRetry(video, url); }
-        return video;
+      if(/\.m3u8($|\?)/i.test(url)&&window.Hls&&Hls.isSupported()){
+        attachHls(video,url,isMain);
+      } else {
+        video.src=url;
       }
-      if(/\.mpd(\?|$)/i.test(url) && window.dashjs){
-        const p = dashjs.MediaPlayer().create();
-        p.initialize(video,url,false);
-        try {
-          p.updateSettings({
-            'streaming': {
-              'stableBufferTime': 8,
-              'bufferTimeAtTopQualityLongForm': 10,
-              'lowLatencyEnabled': true,
-              'liveDelay': 3
-            },
-            'abr': { 'autoSwitchBitrate': { 'video': true } }
-          });
-        } catch(e){}
-        return video;
+      return video;
+    }
+
+    function initPlayers(){
+      if(!mainPlayer){
+        mainPlayer=createVideo(mainContainer,sources.main,true);
       }
-      video.src=url; return video;
+      activePlayer=createVideo(camContainer,sources[currentCam],false);
     }
 
-    // تحسين تكييف الجودة عند تغير حجم الحاوية
-    const ro = new ResizeObserver(entries=>{
-      for(const {target} of entries){
-        const v = target.querySelector('video');
-        if(!v) continue;
-        const inst = hlsMap.get(v);
-        if (inst && inst.autoLevelEnabled) {
-          try { inst.startLoad(); } catch(e){}
-        }
-      }
-    });
-    ro.observe(document.getElementById('mainPreview'));
-    ro.observe(document.getElementById('activeCam'));
-
-    /* ===== من هنا بقية منطقك كما هو ===== */
-
-    function initPlayers(){ if(!mainPlayer){ mainPlayer=createVideo(mainContainer, sources.main, true); } activePlayer=createVideo(camContainer, sources[currentCam], false); }
-
-    async function startPlayback(){
-      if(started) return; started=true; gatePlay.classList.add('hidden');
-      await playEntity(mainPlayer,true); await playEntity(activePlayer,true);
-      globalControls.classList.remove('hidden'); await initDurations(); setTimeout(syncCams,400);
-      startDriftCorrection(); startTimeTicker();
+    function startPlayback(){
+      gatePlay.classList.add('hidden');
+      if(mainPlayer && mainPlayer.play) mainPlayer.play().catch(()=>{});
+      if(activePlayer && activePlayer.play) activePlayer.play().catch(()=>{});
     }
 
-    async function playEntity(ent, keepMuted=true){
-      if(ent && ent.getVolume && ent.play){ try{ if(keepMuted) await ent.setVolume(0); await ent.play(); }catch(e){} return; }
-      if(ent && ent.playVideo){ try{ ent.mute(); ent.playVideo(); }catch(e){} return; }
-      if(ent instanceof HTMLVideoElement){ try{ ent.muted=!!keepMuted; await ent.play(); }catch(e){} }
-    }
-
-    function getMainTime(){
-      if(mainPlayer && mainPlayer.getCurrentTime) return mainPlayer.getCurrentTime();
-      if(mainPlayer instanceof HTMLVideoElement) return Promise.resolve(mainPlayer.currentTime||0);
-      return Promise.resolve(0);
-    }
-    function getMainDuration(){
-      if(mainPlayer && mainPlayer.getDuration) return mainPlayer.getDuration();
-      if(mainPlayer instanceof HTMLVideoElement) return Promise.resolve(mainPlayer.duration||0);
-      return Promise.resolve(0);
-    }
-    function seekMainTo(t){
-      if(mainPlayer && mainPlayer.setCurrentTime) return mainPlayer.setCurrentTime(t).catch(()=>{});
-      if(mainPlayer && mainPlayer.seekTo){ try{ mainPlayer.seekTo(t,true); }catch(e){} return Promise.resolve(); }
-      if(mainPlayer instanceof HTMLVideoElement){ mainPlayer.currentTime=t; } return Promise.resolve();
-    }
-    function seekActiveTo(t){
-      if(activePlayer && activePlayer.setCurrentTime) return activePlayer.setCurrentTime(t).catch(()=>{});
-      if(activePlayer && activePlayer.seekTo){ try{ activePlayer.seekTo(t,true); }catch(e){} return Promise.resolve(); }
-      if(activePlayer instanceof HTMLVideoElement){ activePlayer.currentTime=t; } return Promise.resolve();
-    }
-
-    async function syncCams(showBadge=true){
-      if(showBadge) showSync(true); setCamButtonsLoading(true);
-      try{ const t=await getMainTime(); await seekActiveTo(t); }
-      finally{ setTimeout(()=>setCamButtonsLoading(false),180); if(showBadge) setTimeout(()=>showSync(false),250); }
-    }
-
-    function startDriftCorrection(){
-      stopDriftCorrection();
-      driftTimer=setInterval(async()=>{
-        try{
-          const mt=await getMainTime(); const at=await getActiveTime();
-          const drift=Math.abs((at||0)-(mt||0));
-          if(drift>0.35){ showSync(true); await seekActiveTo(mt); setTimeout(()=>showSync(false),250); }
-        }catch(e){}
-      },5000);
-    }
-    function stopDriftCorrection(){ if(driftTimer){ clearInterval(driftTimer); driftTimer=null; } }
-    function getActiveTime(){
-      if(activePlayer && activePlayer.getCurrentTime) return activePlayer.getCurrentTime();
-      if(activePlayer instanceof HTMLVideoElement) return Promise.resolve(activePlayer.currentTime||0);
-      return Promise.resolve(0);
-    }
-    function showSync(v){ syncStatus.classList.toggle('hidden',!v); }
-
-    function setCamButtonsLoading(s){ [...camControls.querySelectorAll('button')].forEach(b=>b.classList.toggle('loading',s)); }
-    function setOneButtonLoading(btn,s){ if(btn) btn.classList.toggle('loading',s); }
-
-    async function initDurations(){ const d=await getMainDuration(); scrub.max=(d&&isFinite(d))?d:0; }
-    function fmt(t){ t=Math.max(0,Math.floor(t||0)); const m=String(Math.floor(t/60)).padStart(2,'0'); const s=String(t%60).padStart(2,'0'); return `${m}:${s}`; }
-    let ticker=null, isScrubbing=false;
-    function startTimeTicker(){
-      if(ticker) return;
-      ticker=setInterval(async()=>{
-        if(isScrubbing) return;
-        const ct=await getMainTime();
-        const d=await getMainDuration();
-        // إخفِ الوقت الكلي في البث المباشر (غير معروف)
-        const total = (d && isFinite(d) && d !== Infinity) ? d : 0;
-        if(total && isFinite(total)) scrub.max=total; else scrub.max=0;
-        scrub.value=ct||0;
-        const totalTxt = total? fmt(total) : 'LIVE';
-        timeLabel.textContent=`${fmt(ct)} / ${totalTxt}`;
-      },250);
-    }
-    function stopTimeTicker(){ if(ticker){ clearInterval(ticker); ticker=null; } }
-
-    async function togglePlayPause(){
-      if(/vimeo\.com/i.test(sources.main) && mainPlayer && mainPlayer.getPaused){
-        const p=await mainPlayer.getPaused().catch(()=>null); if(p===null) return; if(p){ await mainPlayer.play().catch(()=>{}); } else { await mainPlayer.pause().catch(()=>{}); }
-        const mt=await getMainTime(); await seekActiveTo(mt); return;
-      }
-      if(/youtube\.com|youtu\.be/i.test(sources.main) && mainPlayer && mainPlayer.getPlayerState){
-        const st=mainPlayer.getPlayerState(); if(st===1){ try{mainPlayer.pauseVideo()}catch(e){} } else { try{mainPlayer.playVideo()}catch(e){} }
-        const mt=await getMainTime(); await seekActiveTo(mt); return;
-      }
-      if(mainPlayer instanceof HTMLVideoElement){
-        if(mainPlayer.paused){ await mainPlayer.play().catch(()=>{}); } else { mainPlayer.pause(); }
-        const mt=await getMainTime(); await seekActiveTo(mt);
-      }
-    }
-
-    async function jumpBy(dlt){
-      const t=await getMainTime(); const d=await getMainDuration();
-      let nt=(t||0)+dlt; if(d&&isFinite(d)) nt=Math.min(Math.max(0,nt),d);
-      showSync(true); await seekMainTo(nt); await seekActiveTo(nt); setTimeout(()=>showSync(false),250);
-    }
-
-    gPlay.addEventListener('click',togglePlayPause);
-    gBack.addEventListener('click',()=>jumpBy(-5));
-    gFwd.addEventListener('click',()=>jumpBy(+5));
-    scrub.addEventListener('input',()=>{ isScrubbing=true; timeLabel.textContent=`${fmt(scrub.value)} / ${fmt(scrub.max||0)}`; });
-    scrub.addEventListener('change',async()=>{ const nt=parseFloat(scrub.value)||0; showSync(true); await seekMainTo(nt); await seekActiveTo(nt); setTimeout(()=>showSync(false),250); isScrubbing=false; });
-
-    function switchCam(cam, btnEl){
-      currentCam=cam; setOneButtonLoading(btnEl,true);
-      activePlayer=createVideo(camContainer, sources[cam], false);
-      if(started){ playEntity(activePlayer,true).then(async()=>{ const t=await getMainTime(); showSync(true); await seekActiveTo(t); setTimeout(()=>showSync(false),250); }); }
-      const clearBtn=()=>setOneButtonLoading(btnEl,false);
-      const vid=camContainer.querySelector('video'); if(vid){ const off=()=>{ vid.removeEventListener('timeupdate',onTU); clearBtn(); }; const onTU=()=>off(); vid.addEventListener('timeupdate',onTU); setTimeout(off,4000); } else { setTimeout(clearBtn,2500); }
-    }
-
-    function applySplitClasses(){
-      root.classList.toggle('split',splitMode!==0);
-      root.classList.toggle('fill',(splitMode!==0&&(splitMode===2||fillMode)));
-      [mainContainer,camContainer].forEach(ct=>{ const v=ct.querySelector('video'); if(v){ v.style.objectFit=((splitMode===2||fillMode)?'cover':'contain'); } });
-    }
-    function toggleSplitMode(){ splitMode=(splitMode+1)%3; if(splitMode!==0 && isMainFull){ isMainFull=false; root.classList.remove('main-full'); } applySplitClasses(); }
-    function toggleFillMode(){ fillMode=!fillMode; applySplitClasses(); }
-    function toggleMainZoom(){ if(splitMode!==0) return; isMainFull=!isMainFull; root.classList.toggle('main-full',isMainFull); }
-
-    async function toggleSound(){
-      if(/vimeo\.com/i.test(sources.main)){ try{ const v=await mainPlayer.getVolume(); if(v>0){ await mainPlayer.setVolume(0); } else { await mainPlayer.setVolume(1); await mainPlayer.play().catch(()=>{}); } }catch(e){} return; }
-      if(/youtube\.com|youtu\.be/i.test(sources.main)){ try{ if(mainPlayer.isMuted()) mainPlayer.unMute(); else mainPlayer.mute(); try{mainPlayer.playVideo()}catch(e){} }catch(e){} return; }
-      if(mainPlayer instanceof HTMLVideoElement){ mainPlayer.muted=!mainPlayer.muted; if(mainPlayer.paused){ mainPlayer.play().catch(()=>{}); } }
+    function switchCam(cam,btn){
+      currentCam=cam;
+      activePlayer=createVideo(camContainer,sources[cam],false);
+      if(activePlayer && activePlayer.play) activePlayer.play().catch(()=>{});
     }
 
     startBtn.addEventListener('click',startPlayback);
-    mainContainer.addEventListener('click',toggleMainZoom);
-    zoomBtn.addEventListener('click',toggleMainZoom);
-    btnSplit.addEventListener('click',toggleSplitMode);
-    btnFill.addEventListener('click',toggleFillMode);
-    btnSound.addEventListener('click',toggleSound);
-    camControls.addEventListener('click',(e)=>{ const btn=e.target.closest('button[data-cam]'); if(!btn) return; switchCam(btn.getAttribute('data-cam'),btn); });
-
-    window.addEventListener('keydown',(e)=>{
-      if(e.key===' '||e.key==='Enter'){ e.preventDefault(); if(!started) startPlayback(); else togglePlayPause(); }
-      else if(e.key.toLowerCase()==='m'){ e.preventDefault(); toggleSound(); }
-      else if(e.key.toLowerCase()==='s'){ e.preventDefault(); toggleSplitMode(); }
-      else if(e.key.toLowerCase()==='f'){ e.preventDefault(); toggleMainZoom(); }
-      else if(e.key.toLowerCase()==='j'){ e.preventDefault(); if(started) jumpBy(-5); }
-      else if(e.key.toLowerCase()==='l'){ e.preventDefault(); if(started) jumpBy(5); }
+    camControls.addEventListener('click',(e)=>{
+      const btn=e.target.closest('button[data-cam]');
+      if(!btn) return;
+      switchCam(btn.getAttribute('data-cam'),btn);
     });
-
-    window.onYouTubeIframeAPIReady=initPlayers;
-    window.addEventListener('load',()=>{ if(!/youtube\.com|youtu\.be/i.test(sources.main)) initPlayers(); });
-
-    /* fade-in buttons on activity */
-    (function autoUi(){
-      let t=null;
-      const wake=()=>{ document.body.classList.add('ui-awake'); clearTimeout(t); t=setTimeout(()=>document.body.classList.remove('ui-awake'), 2200); };
-      ['mousemove','touchstart','touchmove','keydown','click'].forEach(ev=>window.addEventListener(ev,wake,{passive:true}));
-      wake();
-    })();
+    window.addEventListener('load',initPlayers);
   </script>
 </body>
 </html>
