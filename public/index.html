@@ -37,7 +37,7 @@
       transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s
     }
     #mainPreview:hover{box-shadow:0 10px 30px #0008}
-    /* يضمن رسم الفيديو داخل المعاينة */
+    /* تأكيد الرسم داخل المعاينة */
     #mainPreview video{display:block;width:100%;height:100%;object-fit:contain}
 
     /* split */
@@ -66,7 +66,7 @@
     /* global scrubber (center bottom) */
     #globalControls{
       bottom:70px;left:50%;transform:translateX(-50%);
-      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bد);
+      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);
       backdrop-filter:blur(8px);align-items:center;min-width:320px
     }
     #globalControls.hidden{display:none}
@@ -75,7 +75,7 @@
     #scrub::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #0006;cursor:pointer}
     #timeLabel{color:#fff;font-size:12px;min-width:108px;text-align:center}
 
-    /* camera buttons (desktop default) */
+    /* camera buttons */
     #camControls{
       bottom:14px;left:50%;transform:translateX(-50%);
       background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);backdrop-filter:blur(8px)
@@ -117,7 +117,7 @@
     .icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--panel-bd);color:#fff;background:#111a;font-size:18px}
     #startBtn{min-width:160px}
     #zoomBtn{min-width:auto;padding:10px 12px}
-    .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bd);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
+    .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bد);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
 
     .swap-enter{opacity:0;transition:opacity .18s ease}
     .swap-enter.swap-enter-active{opacity:1}
@@ -220,7 +220,7 @@
 
   <!-- player logic -->
   <script>
-    // ===== HLS sync helpers (محسّنة) =====
+    // ===== إعدادات HLS محسّنة للبث المباشر =====
     const HLS_CONFIG = {
       lowLatencyMode: true,
       liveSyncDuration: 2,
@@ -240,11 +240,33 @@
       xhrSetup: (xhr) => { try { xhr.withCredentials = false; } catch(e){} }
     };
 
+    // ===== دعم الأكواد (AVC/H.264 أولاً، وإلا أي مدعوم) =====
+    function codecPlayable(codec){
+      try{
+        const v=document.createElement('video');
+        return !!v.canPlayType(`video/mp4; codecs="${codec}"`);
+      }catch(e){ return false; }
+    }
+    const SUPPORTS = {
+      avc: codecPlayable('avc1.42E01E') || codecPlayable('avc1.4d401f') || codecPlayable('avc1.640028'),
+      hevc: codecPlayable('hvc1.1.6.L93.B0') || codecPlayable('hev1.1.6.L93.B0')
+    };
+    function pickPlayableLevel(levels){
+      // 1) جرّب AVC
+      let i = levels.findIndex(l=>/avc1/i.test(l?.codecs || l?.codecsVideo || ''));
+      if(i>=0 && SUPPORTS.avc) return i;
+      // 2) إن لم يوجد، جرّب HEVC إن كان المتصفح يدعمه
+      i = levels.findIndex(l=>/(hvc1|hev1)/i.test(l?.codecs || l?.codecsVideo || ''));
+      if(i>=0 && SUPPORTS.hevc) return i;
+      // 3) وإلا اختر أول مستوى بدون تحقق (نترك MSE يقرر)
+      return levels.length?0:-1;
+    }
+
+    // ===== محاذاة عبر EXT-X-PROGRAM-DATE-TIME =====
     const SYNC = {
       main:   { pdtOffset: null, lastPDT: null },
       active: { pdtOffset: null, lastPDT: null }
     };
-
     function trackPDT(hls, video, role){
       if(!hls || !(video instanceof HTMLVideoElement)) return;
       hls.on(Hls.Events.FRAG_CHANGED, (_,data)=>{
@@ -257,7 +279,6 @@
         if (isFinite(off)) SYNC[role].pdtOffset = off;
       });
     }
-
     function pdtAlignedTarget(mainCt){
       const pdtMain = (SYNC.main.pdtOffset!=null && isFinite(SYNC.main.pdtOffset))
         ? (SYNC.main.pdtOffset + (mainCt||0)) : null;
@@ -281,7 +302,6 @@
       }catch(e){}
       try { node.remove(); } catch(e){}
     }
-
     function clampToSeekable(video, t){
       if(!(video instanceof HTMLVideoElement)) return t;
       const r = video.seekable;
@@ -292,7 +312,7 @@
       return Math.min(Math.max(t, start + 0.05), end - 0.05);
     }
 
-    // ===== state =====
+    // ===== الحالة العامة =====
     let mainPlayer, activePlayer;
     let currentCam = "cam1";
     let splitMode = 0, isMainFull = false, fillMode = false, started = false, driftTimer = null;
@@ -374,26 +394,23 @@
           hls.attachMedia(video);
           hls.loadSource(url);
 
-          // ✦ تتبع PDT
+          // تتبع PDT
           trackPDT(hls, video, role);
 
-          // ✦ اختيار مستوى AVC تلقائياً للـ main
-          if (role === 'main') {
-            hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
-              try {
-                const levels = data?.levels || [];
-                const avcIndex = levels.findIndex(
-                  lvl => /avc1/i.test(lvl?.codecs || lvl?.codecsVideo || '')
-                );
-                if (avcIndex >= 0) {
-                  hls.nextLevel = avcIndex;
-                  hls.currentLevel = avcIndex;
-                } else {
-                  console.warn('Main stream has no AVC/H.264 level. Browser may not decode video.');
-                }
-              } catch(e){}
-            });
-          }
+          // اختر مستوى قابل للتشغيل (AVC أولاً؛ وإلا أي مدعوم)
+          hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+            try {
+              const levels = data?.levels || [];
+              const idx = pickPlayableLevel(levels);
+              if (idx >= 0) {
+                hls.nextLevel = idx;
+                hls.currentLevel = idx;
+              } else {
+                console.warn(`${role} stream has no browser-playable level (no AVC/HEVC supported).`);
+                // سنترك hls يختار افتراضيًا؛ مع ذلك قد تبقى سوداء على متصفحات لا تدعم HEVC.
+              }
+            } catch(e){}
+          });
 
           // مرونة أخطاء
           hls.on(Hls.Events.ERROR, (_, data)=>{
@@ -443,10 +460,7 @@
       if(!mainPlayer){ mainPlayer=createVideo(mainContainer, sources.main, 'main'); }
       activePlayer=createVideo(camContainer, sources[currentCam], 'active');
     }
-
-    function initPlayersOnce(){
-      if(inited) return; inited = true; initPlayers();
-    }
+    function initPlayersOnce(){ if(inited) return; inited=true; initPlayers(); }
 
     async function startPlayback(){
       if(started) return; started=true; gatePlay.classList.add('hidden');
@@ -454,7 +468,6 @@
       globalControls.classList.remove('hidden'); await initDurations(); setTimeout(syncCams,400);
       startDriftCorrection(); startTimeTicker();
     }
-
     async function playEntity(ent, keepMuted=true){
       if(ent && ent.getVolume && ent.play){ try{ if(keepMuted) await ent.setVolume(0); await ent.play(); }catch(e){} return; }
       if(ent && ent.playVideo){ try{ ent.mute(); ent.playVideo(); }catch(e){} return; }
@@ -479,17 +492,13 @@
     function seekMainTo(t){
       if(mainPlayer && mainPlayer.setCurrentTime) return mainPlayer.setCurrentTime(t).catch(()=>{});
       if(mainPlayer && mainPlayer.seekTo){ try{ mainPlayer.seekTo(t,true); }catch(e){} return Promise.resolve(); }
-      if(mainPlayer instanceof HTMLVideoElement){
-        mainPlayer.currentTime = clampToSeekable(mainPlayer,t);
-      }
+      if(mainPlayer instanceof HTMLVideoElement){ mainPlayer.currentTime = clampToSeekable(mainPlayer,t); }
       return Promise.resolve();
     }
     function seekActiveTo(t){
       if(activePlayer && activePlayer.setCurrentTime) return activePlayer.setCurrentTime(t).catch(()=>{});
       if(activePlayer && activePlayer.seekTo){ try{ activePlayer.seekTo(t,true); }catch(e){} return Promise.resolve(); }
-      if(activePlayer instanceof HTMLVideoElement){
-        activePlayer.currentTime = clampToSeekable(activePlayer,t);
-      }
+      if(activePlayer instanceof HTMLVideoElement){ activePlayer.currentTime = clampToSeekable(activePlayer,t); }
       return Promise.resolve();
     }
 
@@ -522,7 +531,6 @@
     function stopDriftCorrection(){ if(driftTimer){ clearInterval(driftTimer); driftTimer=null; } }
 
     function showSync(v){ syncStatus.classList.toggle('hidden',!v); }
-
     function setCamButtonsLoading(s){ [...camControls.querySelectorAll('button')].forEach(b=>b.classList.toggle('loading',s)); }
     function setOneButtonLoading(btn,s){ if(btn) btn.classList.toggle('loading',s); }
 
@@ -619,10 +627,10 @@
     window.onYouTubeIframeAPIReady = () => { initPlayersOnce(); };
     window.addEventListener('DOMContentLoaded', () => { initPlayersOnce(); });
 
-    // اختياري: تقليل التدفّق عند الخلفية
+    // (اختياري) تقليل التدفّق عند الخلفية
     document.addEventListener('visibilitychange', ()=>{
       if(document.hidden){
-        // مثال: يمكن لاحقًا خفض مستوى الدقة عبر hls.currentLevel = ...
+        // يمكن لاحقًا خفض الجودة عبر hls.currentLevel = ...
       }
     });
 
