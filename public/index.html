@@ -280,11 +280,15 @@
       backBufferLength: 30,
       maxBufferLength: 10,
       maxMaxBufferLength: 20,
-      maxBufferHole: 0.5,
+      maxBufferHole: 0.4,
       liveSyncDuration: 3,
       liveMaxLatencyDuration: 8,
       liveDurationInfinity: true,
       startPosition: -1,
+      // قلّل النَّجْدَة (nudge) حتى لا نحصل على قفزات عند امتلاء البافر
+      nudgeOffset: 0.1,
+      nudgeMaxRetry: 3,
+      // إعادة المحاولات
       fragLoadingRetryDelay: 800,
       fragLoadingMaxRetry: 6,
       manifestLoadingRetryDelay: 1200,
@@ -319,8 +323,74 @@
       });
     }
     function attachHls(video, url, isMain=false) {
-      const cfg = { ...HLS_BASE_CONFIG };
-      if (isMain) { cfg.liveSyncDuration = 2.5; cfg.liveMaxLatencyDuration = 6; }
+      // سنختار بروفايل التشغيل اعتمادًا على نوع المانيفست
+      // LL-HLS: يحتوي على EXT-X-PART أو EXT-X-SERVER-CONTROL
+      let cfg = { ...HLS_BASE_CONFIG };
+
+      const hls = new Hls(cfg);
+      hls.loadSource(url);
+      hls.attachMedia(video);
+
+      // عند تحميل الليفل، إكشف خصائص المانيفست وعدّل الإعدادات ديناميكيًا
+      hls.on(Hls.Events.LEVEL_LOADED, (_, data) => {
+        const d = data && data.details;
+        if (!d) return;
+        const isLL = d.partList && d.partList.length || /SERVER-CONTROL/i.test(d.fragHint?.attrs || '') || d.canBlockReload || d.canSkipUntil;
+        const target = d.targetduration || 6;
+
+        if (isLL) {
+          // وضع LL-HLS — بافر صغير وكمون منخفض
+          hls.config.lowLatencyMode = true;
+          hls.config.liveSyncDuration = isMain ? 2 : 3;
+          hls.config.maxBufferLength = 8;
+        } else {
+          // HLS تقليدي — عطهِ بافر أكبر لتقليل التهنيج
+          hls.config.lowLatencyMode = false;
+          hls.config.liveSyncDuration = Math.min( target * 2.5, 12 );
+          hls.config.maxBufferLength = 18;
+          hls.config.maxMaxBufferLength = 30;
+          hls.config.maxBufferHole = 0.1;
+        }
+
+        if (isMain) {
+          // المسار الرئيسي دائمًا بافر أكبر بقليل من المعاينة
+          hls.config.liveSyncDuration = Math.max(2, hls.config.liveSyncDuration - 0.5);
+        }
+      });
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(()=>{}); });
+
+      // مراقبة التعثرات: إن حدثت Stalled، زِد البافر أو أعِد التزامن
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        const { type, details, fatal } = data || {};
+        // console.debug('[HLS]', type, details, fatal);
+        if (!fatal) {
+          if (details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
+            // ادفع لاعب المعاينة قليلاً للأمام لتجاوز الثغرة
+            try { video.currentTime += 0.25; } catch(e){}
+          }
+          return;
+        }
+        if (type === Hls.ErrorTypes.NETWORK_ERROR) {
+          try { hls.startLoad(); } catch(e) {}
+        } else if (type === Hls.ErrorTypes.MEDIA_ERROR) {
+          try { hls.recoverMediaError(); }
+          catch(e) { try { hls.swapAudioCodec(); hls.recoverMediaError(); } catch(_) {} }
+        } else {
+          try { hls.destroy(); } catch(e) {}
+          setTimeout(() => { destroyAttachedHls(video); attachHls(video, url, isMain); }, 1000);
+        }
+      });
+
+      // سجّل إحصاءات لمساعدتنا على التشخيص من الكونسول
+      hls.on(Hls.Events.FRAG_BUFFERED, (_, data) => {
+        const bw = Math.round(hls.bandwidthEstimate/1000);
+        // console.debug(`[HLS] bw≈${bw}kbps level=${hls.currentLevel} buf=${video.buffered.length? (video.buffered.end(0)-video.currentTime).toFixed(1):'0'}s`);
+      });
+
+      hlsMap.set(video, hls);
+      return hls;
+    }
       const hls = new Hls(cfg);
       hls.loadSource(url);
       hls.attachMedia(video);
@@ -479,7 +549,20 @@
     async function initDurations(){ const d=await getMainDuration(); scrub.max=(d&&isFinite(d))?d:0; }
     function fmt(t){ t=Math.max(0,Math.floor(t||0)); const m=String(Math.floor(t/60)).padStart(2,'0'); const s=String(t%60).padStart(2,'0'); return `${m}:${s}`; }
     let ticker=null, isScrubbing=false;
-    function startTimeTicker(){ if(ticker) return; ticker=setInterval(async()=>{ if(isScrubbing) return; const ct=await getMainTime(); const d=await getMainDuration(); if(d&&isFinite(d)) scrub.max=d; scrub.value=ct||0; timeLabel.textContent=`${fmt(ct)} / ${fmt(d||0)}`; },250); }
+    function startTimeTicker(){
+      if(ticker) return;
+      ticker=setInterval(async()=>{
+        if(isScrubbing) return;
+        const ct=await getMainTime();
+        const d=await getMainDuration();
+        // إخفِ الوقت الكلي في البث المباشر (غير معروف)
+        const total = (d && isFinite(d) && d !== Infinity) ? d : 0;
+        if(total && isFinite(total)) scrub.max=total; else scrub.max=0;
+        scrub.value=ct||0;
+        const totalTxt = total? fmt(total) : 'LIVE';
+        timeLabel.textContent=`${fmt(ct)} / ${totalTxt}`;
+      },250);
+    }
     function stopTimeTicker(){ if(ticker){ clearInterval(ticker); ticker=null; } }
 
     async function togglePlayPause(){
