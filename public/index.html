@@ -37,6 +37,8 @@
       transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s
     }
     #mainPreview:hover{box-shadow:0 10px 30px #0008}
+    /* يضمن رسم الفيديو داخل المعاينة */
+    #mainPreview video{display:block;width:100%;height:100%;object-fit:contain}
 
     /* split */
     .split #mainPreview{top:0;right:0;left:auto;width:50%;height:100%;border-radius:0;border-width:0;cursor:default}
@@ -64,7 +66,7 @@
     /* global scrubber (center bottom) */
     #globalControls{
       bottom:70px;left:50%;transform:translateX(-50%);
-      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);
+      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bد);
       backdrop-filter:blur(8px);align-items:center;min-width:320px
     }
     #globalControls.hidden{display:none}
@@ -88,7 +90,7 @@
     .dot{width:10px;height:10px;border-radius:50%;border:2px solid #8fd3ff;border-top-color:transparent;animation:spin .8s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
 
-    /* split: keep scrub bottom center as well */
+    /* split layout */
     .split #camControls{top:50%;left:12px;bottom:auto;transform:translateY(-50%);flex-direction:column;align-items:stretch}
     .split #globalControls{bottom:70px;left:50%;transform:translateX(-50%);top:auto}
     .split #syncStatus{bottom:122px;left:50%;transform:translateX(-50%);top:auto}
@@ -221,31 +223,23 @@
     // ===== HLS sync helpers (محسّنة) =====
     const HLS_CONFIG = {
       lowLatencyMode: true,
-      // استخدام duration بدل count يجعل الحافة الحية أدق في البث المباشر
-      liveSyncDuration: 2,              // ثواني عند الحافة
-      liveMaxLatencyDuration: 10,       // سقف تأخر مقبول قبل اللحاق
+      liveSyncDuration: 2,
+      liveMaxLatencyDuration: 10,
       maxLiveSyncPlaybackRate: 1.2,
       capLevelToPlayerSize: true,
-      maxBufferLength: 12,              // يقلّل تراكم البفر
+      maxBufferLength: 12,
       backBufferLength: 30,
       maxFragLookUpTolerance: 0.5,
       enableWorker: true,
-
-      // محاولات وتحمل أخطاء الشبكة
       fragLoadingMaxRetry: 10,
       fragLoadingRetryDelay: 500,
       manifestLoadingMaxRetry: 10,
       manifestLoadingRetryDelay: 1000,
       levelLoadingMaxRetry: 10,
       levelLoadingRetryDelay: 1000,
-
-      // لا كوكيز
       xhrSetup: (xhr) => { try { xhr.withCredentials = false; } catch(e){} }
     };
 
-    /**
-     * محاذاة الكاميرات على ساعة الحائط باستخدام EXT-X-PROGRAM-DATE-TIME
-     */
     const SYNC = {
       main:   { pdtOffset: null, lastPDT: null },
       active: { pdtOffset: null, lastPDT: null }
@@ -298,11 +292,11 @@
       return Math.min(Math.max(t, start + 0.05), end - 0.05);
     }
 
-    // ===== Existing app state =====
+    // ===== state =====
     let mainPlayer, activePlayer;
     let currentCam = "cam1";
     let splitMode = 0, isMainFull = false, fillMode = false, started = false, driftTimer = null;
-    let inited = false; // منع التهيئة المزدوجة
+    let inited = false;
 
     const root = document.getElementById('playerContainer');
     const mainContainer = document.getElementById('mainPreview');
@@ -336,7 +330,6 @@
     }
 
     function createVideo(container, url, role){
-      // غلاف للانتقال السلس
       const wrapper = document.createElement('div');
       wrapper.style.position='absolute';
       wrapper.style.inset='0';
@@ -369,12 +362,9 @@
       video.style.objectFit=((splitMode===2||fillMode)?'cover':'contain');
       wrapper.appendChild(video);
 
-      // تشغيل تلقائي آمن عند الجاهزية لضمان الظهور
       const kickPlay = () => { video.play().catch(()=>{}); };
 
-      // HLS
       if(/\.m3u8(\?|$)/i.test(url)){
-        // Safari/iOS: HLS أصلي
         if(video.canPlayType('application/vnd.apple.mpegURL')){
           video.src=url;
           video.addEventListener('loadedmetadata', kickPlay, {once:true});
@@ -384,10 +374,28 @@
           hls.attachMedia(video);
           hls.loadSource(url);
 
-          // تتبع PDT للمزامنة
+          // ✦ تتبع PDT
           trackPDT(hls, video, role);
 
-          // مرونة الأخطاء
+          // ✦ اختيار مستوى AVC تلقائياً للـ main
+          if (role === 'main') {
+            hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+              try {
+                const levels = data?.levels || [];
+                const avcIndex = levels.findIndex(
+                  lvl => /avc1/i.test(lvl?.codecs || lvl?.codecsVideo || '')
+                );
+                if (avcIndex >= 0) {
+                  hls.nextLevel = avcIndex;
+                  hls.currentLevel = avcIndex;
+                } else {
+                  console.warn('Main stream has no AVC/H.264 level. Browser may not decode video.');
+                }
+              } catch(e){}
+            });
+          }
+
+          // مرونة أخطاء
           hls.on(Hls.Events.ERROR, (_, data)=>{
             if(!data?.fatal) return;
             switch(data.type){
@@ -409,10 +417,8 @@
             }
           });
 
-          // ابدأ التشغيل فور الجاهزية
           video.addEventListener('loadedmetadata', kickPlay, {once:true});
         } else {
-          // fallback
           video.src=url;
           video.addEventListener('loadedmetadata', kickPlay, {once:true});
         }
@@ -421,11 +427,11 @@
         p.initialize(video,url,false);
         video.addEventListener('loadedmetadata', kickPlay, {once:true});
       } else {
-        video.src=url; // ملف عادي
+        video.src=url;
         video.addEventListener('loadedmetadata', kickPlay, {once:true});
       }
 
-      // عند الجاهزية، أزل الطبقات الأقدم تلقائياً
+      // إزالة الطبقات الأقدم
       video.addEventListener('canplay', ()=>{
         [...container.children].slice(0,-1).forEach(ch=>destroyVideoNode(ch));
       },{once:true});
@@ -439,9 +445,7 @@
     }
 
     function initPlayersOnce(){
-      if(inited) return;
-      inited = true;
-      initPlayers();
+      if(inited) return; inited = true; initPlayers();
     }
 
     async function startPlayback(){
@@ -599,8 +603,7 @@
         newcomer.addEventListener('canplay', promote, {once:true});
         playEntity(newcomer,true);
       } else {
-        // YT/Vimeo
-        promote();
+        promote(); // YT/Vimeo
       }
     }
 
@@ -616,7 +619,7 @@
     window.onYouTubeIframeAPIReady = () => { initPlayersOnce(); };
     window.addEventListener('DOMContentLoaded', () => { initPlayersOnce(); });
 
-    // تقليل التدفّق أثناء الخلفية (اختياريًا)
+    // اختياري: تقليل التدفّق عند الخلفية
     document.addEventListener('visibilitychange', ()=>{
       if(document.hidden){
         // مثال: يمكن لاحقًا خفض مستوى الدقة عبر hls.currentLevel = ...
