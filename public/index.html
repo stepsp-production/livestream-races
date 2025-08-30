@@ -6,11 +6,15 @@
 
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
-  script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
-  connect-src 'self' http://46.152.153.249 https://livestream-races.onrender.com blob: data:;
-  media-src   'self' http://46.152.153.249 https://livestream-races.onrender.com blob: data:;
-  style-src 'self' 'unsafe-inline';
+  script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.dashjs.org https://www.youtube.com https://player.vimeo.com;
+  script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.dashjs.org https://www.youtube.com https://player.vimeo.com;
+  worker-src 'self' blob:;
+  connect-src 'self' blob: data:;
+  media-src   'self' blob: data:;
   img-src 'self' data: blob:;
+  style-src 'self' 'unsafe-inline';
+  font-src 'self';
+  frame-src 'self' https://www.youtube.com https://player.vimeo.com;
 ">
 
 
@@ -136,18 +140,17 @@
   </div>
 
 <script>
-  // put the EXACT external URL of your Web Service here (NOT the static site)
-  const R = 'https://livestream-races.onrender.com';
-
-  window.sources = {
-    main: `${R}/hls/live/playlist.m3u8`,
-    cam1: `${R}/hls/lastone/playlist.m3u8`,
-    cam2: `${R}/hls/live2/playlist.m3u8`,
-    cam3: `${R}/hls/live3/playlist.m3u8`,
-    cam4: `${R}/hls/live4/playlist.m3u8`,
-    cam5: `${R}/hls/live5/playlist.m3u8`,
-    cam6: `${R}/hls/live6/playlist.m3u8`,
-  };
+// IMPORTANT: relative paths so they go through your proxy at /hls/*
+const R = ''; // keep empty
+window.sources = {
+  main:  `/hls/live/playlist.m3u8`,
+  cam1:  `/hls/lastone/playlist.m3u8`,
+  cam2:  `/hls/live2/playlist.m3u8`,
+  cam3:  `/hls/live3/playlist.m3u8`,
+  cam4:  `/hls/live4/playlist.m3u8`,
+  cam5:  `/hls/live5/playlist.m3u8`,
+  cam6:  `/hls/live6/playlist.m3u8`
+};
 </script>
 
   <!-- كود المشغّل (كما هو عندك) -->
