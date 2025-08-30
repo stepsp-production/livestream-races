@@ -32,7 +32,8 @@
       z-index:5;border:2px solid #fff2;border-radius:12px;cursor:pointer;
       transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s
     }
-    #mainPreview:hover{box-shadow:0 10px 30px #0008} /* (تصحيح بسيط للـpx لا يغيّر المظهر) */
+    /* كان فيها خطأ كتابي (10p  x)؛ تم تصحيحه فقط */
+    #mainPreview:hover{box-shadow:0 10px 30px #0008}
 
     /* split */
     .split #mainPreview{top:0;right:0;left:auto;width:50%;height:100%;border-radius:0;border-width:0;cursor:default}
@@ -77,7 +78,7 @@
 
     #syncStatus{
       bottom:122px;left:50%;transform:translateX(-50%);
-      background:#08131fbb;color:#e6f3ff;border:1px solid var(--panel-bd);
+      background:#08131fbb;color:#e6f3ff;border:1px solid var(--panel-bد);
       padding:6px 10px;border-radius:10px;font-size:12px;align-items:center;gap:6px
     }
     #syncStatus.hidden{display:none}
@@ -101,22 +102,3 @@
     body.ui-awake button{opacity:1}
     button:hover{background:var(--btn-bg-h);box-shadow:0 12px 26px #000c,0 0 0 6px var(--btn-ring)}
     button:active{background:var(--btn-bg-a);transform:translateY(1px)}
-    button .sub{display:block;font-weight:600;font-size:10px;opacity:.85;margin-top:4px}
-    .loading{opacity:.85;pointer-events:none;filter:saturate(.85)}
-    .loading::after{content:"";position:absolute;inset:auto 8px 8px auto;width:16px;height:16px;border-radius:50%;border:2px solid #fff8;border-top-color:transparent;animation:spin .8s linear infinite}
-
-    #gatePlay{position:absolute;inset:0;z-index:7;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,rgba(0,0,0,.55),rgba(0,0,0,.2));backdrop-filter:blur(2px)}
-    #gatePlay.hidden{display:none}
-    .gate-card{background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:18px;padding:18px 20px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.45)}
-    .icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--panel-bd);color:#fff;background:#111a;font-size:18px}
-    #startBtn{min-width:160px}
-    #zoomBtn{min-width:auto;padding:10px 12px}
-    .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bd);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
-
-    /* ===== Mobile (landscape) tuning ===== */
-    @media (orientation: landscape) and (max-width: 900px){
-      #mainPreview{ width:45%; height:42%; left:12px; top:12px; border-width:1.5px;border-radius:10px; z-index:6; }
-      .hint{display:none}
-      #utilityControls{ top:14px; left:10px; padding:8px; gap:10px; }
-      #utilityControls .group{gap:6px}
-      #btnSplit, #btnFill, #btnSound{ padding:4px 4px; min-
