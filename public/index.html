@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Universal Multi-Cam Player (Mobile Landscape Tuned)</title>
+  <title>Universal Multi-Cam Player (Mobile Landscape Tuned) — Optimized HLS</title>
 
   <!-- Players -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -269,10 +269,90 @@
     const timeLabel = document.getElementById('timeLabel');
     const syncStatus = document.getElementById('syncStatus');
 
-    function clearContainer(c){ while(c.firstChild){ const n=c.firstChild; if(n.tagName==='VIDEO'){try{n.pause()}catch(e){}} c.removeChild(n);} }
-    function ytId(u){const m1=u.match(/[?&]v=([^&]+)/);if(m1)return m1[1];const m2=u.match(/youtu\.be\/([^?&/]+)/);if(m2)return m2[1];const m3=u.match(/youtube\.com\/live\/([^?&/]+)/);if(m3)return m3[1];const m4=u.match(/embed\/([^?&/]+)/);if(m4)return m4[1];return u.split('/').pop();}
+    function ytId(u){const m1=u.match(/[?&]v=([^&]+)/);if(m1)return m1[1];const m2=u.match(/youtu\.be\/([^?&\/]+)/);if(m2)return m2[1];const m3=u.match(/youtube\.com\/live\/([^?&\/]+)/);if(m3)return m3[1];const m4=u.match(/embed\/([^?&\/]+)/);if(m4)return m4[1];return u.split('/').pop();}
     function vimeoEmbed(u,p){const m=u.match(/vimeo\.com\/(?:video\/)?(\d+)/);const id=m?m[1]:'';const q=new URLSearchParams(p||{}).toString();return `https://player.vimeo.com/video/${id}?${q}`;}
 
+    /* ============ تحسينات HLS للبث المباشر ============ */
+    const hlsMap = new WeakMap();
+    const HLS_BASE_CONFIG = {
+      enableWorker: true,
+      lowLatencyMode: true,
+      backBufferLength: 30,
+      maxBufferLength: 10,
+      maxMaxBufferLength: 20,
+      maxBufferHole: 0.5,
+      liveSyncDuration: 3,
+      liveMaxLatencyDuration: 8,
+      liveDurationInfinity: true,
+      startPosition: -1,
+      fragLoadingRetryDelay: 800,
+      fragLoadingMaxRetry: 6,
+      manifestLoadingRetryDelay: 1200,
+      manifestLoadingMaxRetry: 10,
+      levelLoadingRetryDelay: 800,
+      levelLoadingMaxRetry: 6,
+      capLevelToPlayerSize: true,
+      progressive: true,
+      xhrSetup: function (xhr, url) {
+        xhr.setRequestHeader('Cache-Control', 'no-cache');
+        xhr.setRequestHeader('Pragma', 'no-cache');
+      }
+    };
+    function destroyAttachedHls(videoEl) {
+      const inst = hlsMap.get(videoEl);
+      if (inst) {
+        try { inst.destroy(); } catch(e) {}
+        hlsMap.delete(videoEl);
+      }
+    }
+    function attachNativeRetry(video, src) {
+      let retry = 0, maxRetry = 6, baseDelay = 800;
+      const retryLoad = () => {
+        if (retry >= maxRetry) return;
+        retry++;
+        const bust = (src.includes('?') ? '&' : '?') + 't=' + Date.now();
+        video.src = src + bust;
+        video.play().catch(()=>{});
+      };
+      video.addEventListener('error', () => {
+        setTimeout(retryLoad, baseDelay * Math.pow(1.4, retry));
+      });
+    }
+    function attachHls(video, url, isMain=false) {
+      const cfg = { ...HLS_BASE_CONFIG };
+      if (isMain) { cfg.liveSyncDuration = 2.5; cfg.liveMaxLatencyDuration = 6; }
+      const hls = new Hls(cfg);
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(()=>{});
+      });
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        const { type, details, fatal } = data || {};
+        if (!fatal) return;
+        if (type === Hls.ErrorTypes.NETWORK_ERROR) {
+          try { hls.startLoad(); } catch(e) {}
+        } else if (type === Hls.ErrorTypes.MEDIA_ERROR) {
+          try { hls.recoverMediaError(); }
+          catch(e) { try { hls.swapAudioCodec(); hls.recoverMediaError(); } catch(_) {} }
+        } else {
+          try { hls.destroy(); } catch(e) {}
+          const t = setTimeout(() => {
+            const v = video;
+            destroyAttachedHls(v);
+            attachHls(v, url, isMain);
+            clearTimeout(t);
+          }, 1200);
+        }
+      });
+      hlsMap.set(video, hls);
+      return hls;
+    }
+
+    /* استبدال clearContainer ليدمّر Hls أيضاً */
+    function clearContainer(c){ while(c.firstChild){ const n=c.firstChild; if(n.tagName==='VIDEO'){try{n.pause()}catch(e){} destroyAttachedHls(n);} c.removeChild(n);} }
+
+    /* استبدال createVideo لتفعيل إعدادات HLS المُحسّنة */
     function createVideo(container, url, isMain=false){
       clearContainer(container);
       if(/youtube\.com|youtu\.be/i.test(url)){
@@ -288,16 +368,50 @@
         return new Vimeo.Player(iframe,{autopause:false});
       }
       const video=document.createElement('video');
-      video.autoplay=false; video.playsInline=true; video.controls=false; video.muted=true;
+      video.autoplay=false; video.playsInline=true; video.controls=false; video.muted=true; video.preload='auto'; video.disableRemotePlayback = true;
       video.style.width='100%'; video.style.height='100%';
       video.style.objectFit=(splitMode===2||fillMode)?'cover':'contain';
       container.appendChild(video);
 
-      if(/\.m3u8(\?|$)/i.test(url) && window.Hls && Hls.isSupported()){ const hls=new Hls(); hls.loadSource(url); hls.attachMedia(video); }
-      else if(/\.mpd(\?|$)/i.test(url) && window.dashjs){ dashjs.MediaPlayer().create().initialize(video,url,false); }
-      else { video.src=url; }
-      return video;
+      if(/\.m3u8(\?|$)/i.test(url)){
+        if(window.Hls && Hls.isSupported()){ attachHls(video, url, isMain); }
+        else { video.src=url; attachNativeRetry(video, url); }
+        return video;
+      }
+      if(/\.mpd(\?|$)/i.test(url) && window.dashjs){
+        const p = dashjs.MediaPlayer().create();
+        p.initialize(video,url,false);
+        try {
+          p.updateSettings({
+            'streaming': {
+              'stableBufferTime': 8,
+              'bufferTimeAtTopQualityLongForm': 10,
+              'lowLatencyEnabled': true,
+              'liveDelay': 3
+            },
+            'abr': { 'autoSwitchBitrate': { 'video': true } }
+          });
+        } catch(e){}
+        return video;
+      }
+      video.src=url; return video;
     }
+
+    // تحسين تكييف الجودة عند تغير حجم الحاوية
+    const ro = new ResizeObserver(entries=>{
+      for(const {target} of entries){
+        const v = target.querySelector('video');
+        if(!v) continue;
+        const inst = hlsMap.get(v);
+        if (inst && inst.autoLevelEnabled) {
+          try { inst.startLoad(); } catch(e){}
+        }
+      }
+    });
+    ro.observe(document.getElementById('mainPreview'));
+    ro.observe(document.getElementById('activeCam'));
+
+    /* ===== من هنا بقية منطقك كما هو ===== */
 
     function initPlayers(){ if(!mainPlayer){ mainPlayer=createVideo(mainContainer, sources.main, true); } activePlayer=createVideo(camContainer, sources[currentCam], false); }
 
