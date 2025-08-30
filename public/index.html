@@ -11,6 +11,10 @@
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="https://player.vimeo.com/api/player.js"></script>
 
+  <!-- Fix favicon 404 -->
+  <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%230b0b0f'/%3E%3Cpolygon points='26,20 26,44 46,32' fill='%23e53935'/%3E%3C/svg%3E" />
+
   <style>
     :root{
       --btn-bg:#e53935; --btn-bg-h:#d32f2f; --btn-bg-a:#b71c1c; --btn-txt:#fff;
@@ -32,7 +36,6 @@
       z-index:5;border:2px solid #fff2;border-radius:12px;cursor:pointer;
       transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s
     }
-    /* typo fix */
     #mainPreview:hover{box-shadow:0 10px 30px #0008}
 
     /* split */
@@ -114,7 +117,6 @@
     #zoomBtn{min-width:auto;padding:10px 12px}
     .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bd);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
 
-    /* subtle cross-fade on camera swap */
     .swap-enter{opacity:0;transition:opacity .18s ease}
     .swap-enter.swap-enter-active{opacity:1}
 
@@ -218,20 +220,31 @@
   <script>
     // ===== HLS sync helpers =====
     const HLS_CONFIG = {
-      // tuned for live low-latency + smoothness
+      // ضبط لزمن وصول منخفض مع سلاسة جيدة
       lowLatencyMode: true,
       liveSyncDurationCount: 2,
       liveMaxLatencyDurationCount: 6,
-      maxBufferLength: 25,
-      backBufferLength: 30,
+      maxLiveSyncPlaybackRate: 1.2,       // catch-up بسيط عند التأخر
+      capLevelToPlayerSize: true,         // حدّ تلقائي حسب أبعاد اللاعب
+      maxBufferLength: 20,
+      backBufferLength: 60,
       maxFragLookUpTolerance: 0.25,
       enableWorker: true,
+      // استرجاع تلقائي مع محاولات
+      fragLoadingMaxRetry: 6,
+      fragLoadingRetryDelay: 1000,
+      manifestLoadingMaxRetry: 6,
+      manifestLoadingRetryDelay: 1000,
+      levelLoadingMaxRetry: 6,
+      levelLoadingRetryDelay: 1000,
+      // عدم إرسال كويكز
+      xhrSetup: (xhr) => { try { xhr.withCredentials = false; } catch(e){} }
     };
 
     /**
-     * We align cameras by wall-clock using EXT-X-PROGRAM-DATE-TIME (PDT) when available.
-     * For each video, we keep an estimate:  pdtOffset = (frag.PDT in seconds) - (video.currentTime)
-     * Then to seek active to the same real moment as main:  tActive = (PDT_main) - (pdtOffset_active)
+     * نُحاذي الكاميرات على ساعة الحائط باستخدام EXT-X-PROGRAM-DATE-TIME
+     * pdtOffset = frag.PDT(s) - video.currentTime
+     * targetActive = PDT(main) - pdtOffset(active)
      */
     const SYNC = {
       main:   { pdtOffset: null, lastPDT: null },
@@ -239,43 +252,40 @@
     };
 
     function trackPDT(hls, video, role){
-      if(!hls) return;
+      if(!hls || !(video instanceof HTMLVideoElement)) return;
       hls.on(Hls.Events.FRAG_CHANGED, (_,data)=>{
         const pdtMs = data?.frag?.programDateTime;
-        if(!pdtMs) return; // stream may not carry PDT
+        if(!pdtMs) return;
         const pdtSec = pdtMs/1000;
         SYNC[role].lastPDT = pdtSec;
-        // sample mapping at this moment
-        try{
-          const ct = video.currentTime || 0;
-          const off = pdtSec - ct;
-          if (isFinite(off)) SYNC[role].pdtOffset = off;
-        }catch(e){}
+        const ct = Number(video.currentTime||0);
+        const off = pdtSec - ct;
+        if (isFinite(off)) SYNC[role].pdtOffset = off;
       });
     }
 
     function pdtAlignedTarget(mainCt){
-      // if we have wall-clock for main
       const pdtMain = (SYNC.main.pdtOffset!=null && isFinite(SYNC.main.pdtOffset))
         ? (SYNC.main.pdtOffset + (mainCt||0)) : null;
-      // translate to active timeline if possible
       if(pdtMain!=null && SYNC.active.pdtOffset!=null && isFinite(SYNC.active.pdtOffset)){
         return pdtMain - SYNC.active.pdtOffset;
       }
-      return mainCt; // fallback: raw seconds
+      return mainCt;
     }
 
     function destroyVideoNode(node){
       if(!node) return;
       try{
-        if(node.tagName==='VIDEO'){
-          node.pause();
-          if(node.__hls){ try{ node.__hls.destroy(); }catch(e){} }
-          node.removeAttribute('src');
-          node.load?.();
+        const vid = node.tagName === 'VIDEO' ? node : node.querySelector?.('video');
+        const hls = vid?.__hls;
+        if(vid){
+          try { vid.pause(); } catch(e){}
+          if(hls){ try{ hls.destroy(); }catch(e){} }
+          vid.removeAttribute('src');
+          try { vid.load?.(); } catch(e){}
         }
       }catch(e){}
-      node.remove();
+      try { node.remove(); } catch(e){}
     }
 
     function clampToSeekable(video, t){
@@ -311,13 +321,6 @@
     const timeLabel = document.getElementById('timeLabel');
     const syncStatus = document.getElementById('syncStatus');
 
-    function clearContainerKeep(node){
-      while(node.firstChild){
-        const n = node.firstChild;
-        destroyVideoNode(n);
-      }
-    }
-
     function ytId(u){
       const m1=u.match(/[?&]v=([^&]+)/); if(m1) return m1[1];
       const m2=u.match(/youtu\.be\/([^?&\/]+)/); if(m2) return m2[1];
@@ -332,14 +335,12 @@
     }
 
     function createVideo(container, url, role){
-      // role: 'main' | 'active'
-      // cross-fade swap support
+      // غلاف للانتقال السلس
       const wrapper = document.createElement('div');
       wrapper.style.position='absolute';
       wrapper.style.inset='0';
       wrapper.className='swap-enter';
       container.appendChild(wrapper);
-      // allow CSS transition
       requestAnimationFrame(()=>wrapper.classList.add('swap-enter-active'));
 
       // YouTube
@@ -362,35 +363,59 @@
       // HTMLVideo (HLS/DASH/file)
       const video=document.createElement('video');
       video.autoplay=false; video.playsInline=true; video.controls=false; video.muted=true;
+      video.preload='auto'; video.crossOrigin='anonymous';
       video.style.width='100%'; video.style.height='100%';
       video.style.objectFit=((splitMode===2||fillMode)?'cover':'contain');
       wrapper.appendChild(video);
 
-      if(/\.m3u8(\?|$)/i.test(url) && window.Hls && Hls.isSupported()){
-        const hls=new Hls(HLS_CONFIG);
-        video.__hls = hls;
-        hls.attachMedia(video);
-        hls.loadSource(url);
-        // error resilience
-        hls.on(Hls.Events.ERROR, (_, data)=>{
-          if(data?.fatal){
+      // HLS
+      if(/\.m3u8(\?|$)/i.test(url)){
+        // Safari/iOS: استخدم HLS الأصلي إن أمكن
+        if(video.canPlayType('application/vnd.apple.mpegURL')){
+          video.src=url;
+          video.addEventListener('loadedmetadata', ()=>{ /* no-op */ }, {once:true});
+        } else if(window.Hls && Hls.isSupported()){
+          const hls=new Hls(HLS_CONFIG);
+          video.__hls = hls;
+          hls.attachMedia(video);
+          hls.loadSource(url);
+
+          // تتبع PDT للمزامنة
+          trackPDT(hls, video, role);
+
+          // مرونة الأخطاء
+          hls.on(Hls.Events.ERROR, (_, data)=>{
+            if(!data?.fatal) return;
             switch(data.type){
-              case Hls.ErrorTypes.NETWORK_ERROR: try{ hls.startLoad(); }catch(e){} break;
-              case Hls.ErrorTypes.MEDIA_ERROR:   try{ hls.recoverMediaError(); }catch(e){} break;
-              default: try{ hls.destroy(); const _h=new Hls(HLS_CONFIG); video.__hls=_h; _h.attachMedia(video); _h.loadSource(url);}catch(e){}
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                try{ hls.startLoad(); }catch(e){}
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                try{ hls.recoverMediaError(); }catch(e){}
+                break;
+              default:
+                try{
+                  hls.destroy();
+                  const _h=new Hls(HLS_CONFIG);
+                  video.__hls=_h;
+                  _h.attachMedia(video);
+                  _h.loadSource(url);
+                  trackPDT(_h, video, role);
+                }catch(e){}
             }
-          }
-        });
-        // PDT tracking for sync
-        trackPDT(hls, video, role);
+          });
+        } else {
+          // fallback أخير
+          video.src=url;
+        }
       } else if(/\.mpd(\?|$)/i.test(url) && window.dashjs){
         const p = dashjs.MediaPlayer().create();
         p.initialize(video,url,false);
       } else {
-        video.src=url; // plain file
+        video.src=url; // ملف عادي
       }
 
-      // when ready, remove older layers (keep only newest)
+      // عند الجاهزية، أزل الطبقات الأقدم تلقائياً
       video.addEventListener('canplay', ()=>{
         [...container.children].slice(0,-1).forEach(ch=>destroyVideoNode(ch));
       },{once:true});
@@ -467,7 +492,6 @@
           const mt=await getMainTime();
           const atProm = (activePlayer && activePlayer.getCurrentTime) ? activePlayer.getCurrentTime() : Promise.resolve(activePlayer?.currentTime||0);
           const at = await atProm;
-          // compare on wall-clock if we can
           const wMain = (SYNC.main.pdtOffset!=null)? SYNC.main.pdtOffset + (mt||0) : null;
           const wAct  = (SYNC.active.pdtOffset!=null)? SYNC.active.pdtOffset + (at||0) : null;
           const drift = (wMain!=null && wAct!=null) ? Math.abs(wAct - wMain) : Math.abs((at||0)-(mt||0));
@@ -539,16 +563,41 @@
 
     function switchCam(cam, btnEl){
       currentCam=cam; setOneButtonLoading(btnEl,true);
-      // create new layer (prebuffer) and then drop old one when ready
       const newcomer = createVideo(camContainer, sources[cam], 'active');
-      const onReady = ()=>{
-        // align immediately to main wall-clock
-        getMainTime().then(mt=>{ const target=pdtAlignedTarget(mt); seekActiveTo.call({activePlayer:newcomer}, target); });
+
+      // رُقّيّ اللاعب الجديد ليصبح activePlayer بعد الجاهزية
+      const promote = async () => {
+        // استبدل المرجع أولاً
+        const oldRef = activePlayer;
+        activePlayer = newcomer;
+
+        // محاذاة فورية مع الـ main على ساعة الحائط
+        const mt = await getMainTime();
+        const target = pdtAlignedTarget(mt);
+        await seekActiveTo(target);
+
+        // نظّف أي طبقات قديمة إن وُجدت
+        [...camContainer.children].slice(0,-1).forEach(ch=>destroyVideoNode(ch));
+
         setTimeout(()=>setOneButtonLoading(btnEl,false),150);
+
+        // أعد تشغيل التصحيح الانجرافي إذا كان موقوفاً
+        startDriftCorrection();
+
+        // أمان: إن كان هناك عنصر قديم ما زال موجوداً أزِله
+        if(oldRef && oldRef !== activePlayer){
+          try{
+            if(oldRef.pause) oldRef.pause();
+          }catch(e){}
+        }
       };
-      if(newcomer instanceof HTMLVideoElement){ newcomer.addEventListener('canplay', onReady, {once:true}); playEntity(newcomer,true); }
-      else { // YT/Vimeo
-        onReady();
+
+      if(newcomer instanceof HTMLVideoElement){
+        newcomer.addEventListener('canplay', promote, {once:true});
+        playEntity(newcomer,true);
+      } else {
+        // YT/Vimeo
+        promote();
       }
     }
 
@@ -571,6 +620,11 @@
 
     window.onYouTubeIframeAPIReady=initPlayers;
     window.addEventListener('load',()=>{ if(!/youtube\.com|youtu\.be/i.test(sources.main)) initPlayers(); });
+
+    // تقليل التدفّق أثناء الخلفية اختياريًا
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.hidden){ /* يمكن لاحقًا خفض مستوى الدقة عبر hls.currentLevel = ... */ }
+    });
 
     /* fade-in buttons on activity */
     (function autoUi(){
