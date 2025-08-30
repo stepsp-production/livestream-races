@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Universal Multi-Cam Player (Mobile Landscape Tuned)</title>
-
+  
+  <link rel="icon" href="data:,">
+  
   <!-- Players -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
@@ -237,7 +239,7 @@
   <script>
     let mainPlayer, activePlayer;
     let currentCam = "cam1";
-    let splitMode = 0, isMainFull = false, fillMode = false, started = false, driftTimer = null;
+    let splitMode = 0, isMainFull = false, fillMode = true, started = false, driftTimer = null;
 
     const root = document.getElementById('playerContainer');
     const mainContainer = document.getElementById('mainPreview');
@@ -369,7 +371,7 @@
       return video;
     }
 
-    function initPlayers(){ 
+    function initPlayers(){ applySplitClasses();
       if(!mainPlayer){ mainPlayer=createVideo(mainContainer, sources.main, true); }
       activePlayer=createVideo(camContainer, sources[currentCam], false);
     }
