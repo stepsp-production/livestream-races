@@ -113,13 +113,6 @@
     #zoomBtn{min-width:auto;padding:10px 12px}
     .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bd);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
 
-       /* شاشة صغيرة جدًا */
- @media (orientation: landscape) and (max-width: 640px){
-      #scrub{width:190px}
-      #camControls button{min-width:80px}
-      #btnSplit, #btnFill, #btnSound{min-width:58px;font-size:10px;padding:6px 7px}
-      #mainPreview{width:76%;height:46%}
-    }
     
     /* ===== Mobile (landscape) tuning ===== */
     @media (orientation: landscape) and (max-width: 900px){
@@ -171,7 +164,13 @@
       .split #syncStatus{bottom:58px}
     }
 
- 
+        /* شاشة صغيرة جدًا */
+ @media (orientation: landscape) and (max-width: 640px){
+      #scrub{width:190px}
+      #camControls button{min-width:80px}
+      #btnSplit, #btnFill, #btnSound{min-width:58px;font-size:10px;padding:6px 7px}
+      #mainPreview{width:76%;height:46%}
+    }
    
   </style>
 </head>
@@ -249,7 +248,7 @@
   <!-- player logic -->
   <script>
     let mainPlayer, activePlayer;
-    let currentCam = "cam2";
+    let currentCam = "cam1";
     let splitMode = 0, isMainFull = false, fillMode = false, started = false, driftTimer = null;
 
     const root = document.getElementById('playerContainer');
