@@ -113,6 +113,14 @@
     #zoomBtn{min-width:auto;padding:10px 12px}
     .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bd);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
 
+       /* شاشة صغيرة جدًا */
+ @media (orientation: landscape) and (max-width: 640px){
+      #scrub{width:190px}
+      #camControls button{min-width:80px}
+      #btnSplit, #btnFill, #btnSound{min-width:58px;font-size:10px;padding:6px 7px}
+      #mainPreview{width:76%;height:46%}
+    }
+    
     /* ===== Mobile (landscape) tuning ===== */
     @media (orientation: landscape) and (max-width: 900px){
       /* 1) Preview much larger (about ~2x previous), keep clear of controls */
@@ -133,7 +141,7 @@
       #utilityControls .group{gap:6px}
       /* تصغير ثلاثة أزرار: تقسيم/ملء/صوت */
       #btnSplit, #btnFill, #btnSound{
-        padding:4px 4px; min-width:15px; font-size:9px; border-radius:3px;
+        padding:4px 4px; min-width:15px; font-size:9px; border-radius:10px;
       }
       /* زر العدسة صغير أيضًا */
       #zoomBtn{padding:4px 4px; min-width:auto}
@@ -145,7 +153,7 @@
         padding:8px; gap:6px;
       }
       #camControls button{
-        min-width:86px; font-size:11px; padding:8px 10px; border-radius:10px;
+        min-width:86px; font-size:10px; padding:8px 10px; border-radius:10px;
       }
 
       /* 4) Global scrubber at very bottom center (replaces cameras place) */
@@ -163,13 +171,8 @@
       .split #syncStatus{bottom:58px}
     }
 
-    /* شاشة صغيرة جدًا */
-    @media (orientation: landscape) and (max-width: 640px){
-      #scrub{width:190px}
-      #camControls button{min-width:80px}
-      #btnSplit, #btnFill, #btnSound{min-width:58px;font-size:10px;padding:6px 7px}
-      #mainPreview{width:76%;height:46%}
-    }
+ 
+   
   </style>
 </head>
 <body>
