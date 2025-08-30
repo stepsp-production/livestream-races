@@ -218,33 +218,33 @@
 
   <!-- player logic -->
   <script>
-    // ===== HLS sync helpers =====
+    // ===== HLS sync helpers (محسّنة) =====
     const HLS_CONFIG = {
-      // ضبط لزمن وصول منخفض مع سلاسة جيدة
       lowLatencyMode: true,
-      liveSyncDurationCount: 2,
-      liveMaxLatencyDurationCount: 6,
-      maxLiveSyncPlaybackRate: 1.2,       // catch-up بسيط عند التأخر
-      capLevelToPlayerSize: true,         // حدّ تلقائي حسب أبعاد اللاعب
-      maxBufferLength: 20,
-      backBufferLength: 60,
-      maxFragLookUpTolerance: 0.25,
+      // استخدام duration بدل count يجعل الحافة الحية أدق في البث المباشر
+      liveSyncDuration: 2,              // ثواني عند الحافة
+      liveMaxLatencyDuration: 10,       // سقف تأخر مقبول قبل اللحاق
+      maxLiveSyncPlaybackRate: 1.2,
+      capLevelToPlayerSize: true,
+      maxBufferLength: 12,              // يقلّل تراكم البفر
+      backBufferLength: 30,
+      maxFragLookUpTolerance: 0.5,
       enableWorker: true,
-      // استرجاع تلقائي مع محاولات
-      fragLoadingMaxRetry: 6,
-      fragLoadingRetryDelay: 1000,
-      manifestLoadingMaxRetry: 6,
+
+      // محاولات وتحمل أخطاء الشبكة
+      fragLoadingMaxRetry: 10,
+      fragLoadingRetryDelay: 500,
+      manifestLoadingMaxRetry: 10,
       manifestLoadingRetryDelay: 1000,
-      levelLoadingMaxRetry: 6,
+      levelLoadingMaxRetry: 10,
       levelLoadingRetryDelay: 1000,
-      // عدم إرسال كويكز
+
+      // لا كوكيز
       xhrSetup: (xhr) => { try { xhr.withCredentials = false; } catch(e){} }
     };
 
     /**
-     * نُحاذي الكاميرات على ساعة الحائط باستخدام EXT-X-PROGRAM-DATE-TIME
-     * pdtOffset = frag.PDT(s) - video.currentTime
-     * targetActive = PDT(main) - pdtOffset(active)
+     * محاذاة الكاميرات على ساعة الحائط باستخدام EXT-X-PROGRAM-DATE-TIME
      */
     const SYNC = {
       main:   { pdtOffset: null, lastPDT: null },
@@ -302,6 +302,7 @@
     let mainPlayer, activePlayer;
     let currentCam = "cam1";
     let splitMode = 0, isMainFull = false, fillMode = false, started = false, driftTimer = null;
+    let inited = false; // منع التهيئة المزدوجة
 
     const root = document.getElementById('playerContainer');
     const mainContainer = document.getElementById('mainPreview');
@@ -368,12 +369,15 @@
       video.style.objectFit=((splitMode===2||fillMode)?'cover':'contain');
       wrapper.appendChild(video);
 
+      // تشغيل تلقائي آمن عند الجاهزية لضمان الظهور
+      const kickPlay = () => { video.play().catch(()=>{}); };
+
       // HLS
       if(/\.m3u8(\?|$)/i.test(url)){
-        // Safari/iOS: استخدم HLS الأصلي إن أمكن
+        // Safari/iOS: HLS أصلي
         if(video.canPlayType('application/vnd.apple.mpegURL')){
           video.src=url;
-          video.addEventListener('loadedmetadata', ()=>{ /* no-op */ }, {once:true});
+          video.addEventListener('loadedmetadata', kickPlay, {once:true});
         } else if(window.Hls && Hls.isSupported()){
           const hls=new Hls(HLS_CONFIG);
           video.__hls = hls;
@@ -404,15 +408,21 @@
                 }catch(e){}
             }
           });
+
+          // ابدأ التشغيل فور الجاهزية
+          video.addEventListener('loadedmetadata', kickPlay, {once:true});
         } else {
-          // fallback أخير
+          // fallback
           video.src=url;
+          video.addEventListener('loadedmetadata', kickPlay, {once:true});
         }
       } else if(/\.mpd(\?|$)/i.test(url) && window.dashjs){
         const p = dashjs.MediaPlayer().create();
         p.initialize(video,url,false);
+        video.addEventListener('loadedmetadata', kickPlay, {once:true});
       } else {
         video.src=url; // ملف عادي
+        video.addEventListener('loadedmetadata', kickPlay, {once:true});
       }
 
       // عند الجاهزية، أزل الطبقات الأقدم تلقائياً
@@ -426,6 +436,12 @@
     function initPlayers(){
       if(!mainPlayer){ mainPlayer=createVideo(mainContainer, sources.main, 'main'); }
       activePlayer=createVideo(camContainer, sources[currentCam], 'active');
+    }
+
+    function initPlayersOnce(){
+      if(inited) return;
+      inited = true;
+      initPlayers();
     }
 
     async function startPlayback(){
@@ -565,30 +581,17 @@
       currentCam=cam; setOneButtonLoading(btnEl,true);
       const newcomer = createVideo(camContainer, sources[cam], 'active');
 
-      // رُقّيّ اللاعب الجديد ليصبح activePlayer بعد الجاهزية
       const promote = async () => {
-        // استبدل المرجع أولاً
         const oldRef = activePlayer;
         activePlayer = newcomer;
-
-        // محاذاة فورية مع الـ main على ساعة الحائط
         const mt = await getMainTime();
         const target = pdtAlignedTarget(mt);
         await seekActiveTo(target);
-
-        // نظّف أي طبقات قديمة إن وُجدت
         [...camContainer.children].slice(0,-1).forEach(ch=>destroyVideoNode(ch));
-
         setTimeout(()=>setOneButtonLoading(btnEl,false),150);
-
-        // أعد تشغيل التصحيح الانجرافي إذا كان موقوفاً
         startDriftCorrection();
-
-        // أمان: إن كان هناك عنصر قديم ما زال موجوداً أزِله
         if(oldRef && oldRef !== activePlayer){
-          try{
-            if(oldRef.pause) oldRef.pause();
-          }catch(e){}
+          try{ if(oldRef.pause) oldRef.pause(); }catch(e){}
         }
       };
 
@@ -609,21 +612,15 @@
     btnSound.addEventListener('click',toggleSound);
     camControls.addEventListener('click',(e)=>{ const btn=e.target.closest('button[data-cam]'); if(!btn) return; switchCam(btn.getAttribute('data-cam'),btn); });
 
-    window.addEventListener('keydown',(e)=>{
-      if(e.key===' '||e.key==='Enter'){ e.preventDefault(); if(!started) startPlayback(); else togglePlayPause(); }
-      else if(e.key.toLowerCase()==='m'){ e.preventDefault(); toggleSound(); }
-      else if(e.key.toLowerCase()==='s'){ e.preventDefault(); toggleSplitMode(); }
-      else if(e.key.toLowerCase()==='f'){ e.preventDefault(); toggleMainZoom(); }
-      else if(e.key.toLowerCase()==='j'){ e.preventDefault(); if(started) jumpBy(-5); }
-      else if(e.key.toLowerCase()==='l'){ e.preventDefault(); if(started) jumpBy(5); }
-    });
+    // تهيئة مؤكدة سواء كان المصدر YouTube أو HLS/DASH
+    window.onYouTubeIframeAPIReady = () => { initPlayersOnce(); };
+    window.addEventListener('DOMContentLoaded', () => { initPlayersOnce(); });
 
-    window.onYouTubeIframeAPIReady=initPlayers;
-    window.addEventListener('load',()=>{ if(!/youtube\.com|youtu\.be/i.test(sources.main)) initPlayers(); });
-
-    // تقليل التدفّق أثناء الخلفية اختياريًا
+    // تقليل التدفّق أثناء الخلفية (اختياريًا)
     document.addEventListener('visibilitychange', ()=>{
-      if(document.hidden){ /* يمكن لاحقًا خفض مستوى الدقة عبر hls.currentLevel = ... */ }
+      if(document.hidden){
+        // مثال: يمكن لاحقًا خفض مستوى الدقة عبر hls.currentLevel = ...
+      }
     });
 
     /* fade-in buttons on activity */
