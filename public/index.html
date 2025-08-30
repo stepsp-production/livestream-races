@@ -15,8 +15,6 @@
   style-src 'self' 'unsafe-inline';
   font-src 'self';
   frame-src 'self' https://www.youtube.com https://player.vimeo.com;
-">
-
 
   <style>
     :root{
@@ -81,7 +79,13 @@
     }
   </style>
 </head>
-<body>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://player.vimeo.com/api/player.js"></script
+  
+  <body>
   <div id="playerContainer" aria-label="مشغّل متعدد الكاميرات">
     <div id="activeCam" class="videoFrame" aria-label="الكاميرا النشطة"></div>
     <div id="mainPreview" class="videoFrame" title="انقر للتكبير/التصغير" aria-label="المعاينة الرئيسية المصغّرة"></div>
