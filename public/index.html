@@ -265,7 +265,24 @@
       const inst = hlsMap.get(videoEl);
       if(inst){ try{inst.destroy()}catch(e){} hlsMap.delete(videoEl); }
     }
+function goLive(video){
+  // استخدم liveSyncPosition إن توفّر من hls.js، وإلا اقفز لنهاية المدى القابل للطلب
+  const hls = hlsMap.get(video);
+  try{
+    if (hls && typeof hls.liveSyncPosition === 'number' && isFinite(hls.liveSyncPosition)) {
+      video.currentTime = hls.liveSyncPosition;
+    } else if (video.seekable && video.seekable.length) {
+      video.currentTime = video.seekable.end(0) - 1.5; // قريب من الحافة المباشرة
+    }
+  }catch(e){}
+}
 
+function canSyncWithMain(newVideo){
+  // نزامن فقط إذا كان كلا المصدرين VOD/DVR (مدّة محدودة)
+  const mainIsLive = (mainPlayer instanceof HTMLVideoElement) ? (mainPlayer.duration === Infinity) : false;
+  const newIsLive  = (newVideo  instanceof HTMLVideoElement) ? (newVideo.duration  === Infinity) : false;
+  return !mainIsLive && !newIsLive;
+}
     function clearContainer(c){
       while(c.firstChild){
         const n=c.firstChild;
@@ -329,7 +346,10 @@
       hls.attachMedia(video);
 
       // شغّل بمجرد解析 الـ Manifest
-      hls.on(Hls.Events.MANIFEST_PARSED, autoPlayWhenReady);
+     hls.on(Hls.Events.MANIFEST_PARSED, () => {
+  if (!isMain) goLive(video);      // اجعل الكاميرا البديلة تقفز للحافة المباشرة
+  autoPlayWhenReady();
+});
 
       hls.on(Hls.Events.LEVEL_LOADED, (_, data)=>{
         const d=data?.details, isLL=!!(d&&(d.partList?.length||d.canBlockReload||d.canSkipUntil||d.canSkipDateRanges));
@@ -471,20 +491,42 @@
     scrub.addEventListener('change',async()=>{ const nt=parseFloat(scrub.value)||0; showSync(true); await seekMainTo(nt); await seekActiveTo(nt); setTimeout(()=>showSync(false),250); isScrubbing=false; });
 
       function switchCam(cam, btnEl){
-    currentCam = cam;
-    setOneButtonLoading(btnEl,true);
+  currentCam = cam;
+  setOneButtonLoading(btnEl, true);
 
-    const prev = activePlayer;
-    activePlayer = createVideo(camContainer, sources[cam], false);
+  activePlayer = createVideo(camContainer, sources[cam], false);
 
-    // شغّل عند الجاهزية + مزامنة مع الوقت الحالي للخط الرئيسي
-    if(started){
-      getMainTime().then(t=>{
-        seekActiveTo(t).finally(()=>{
-          activePlayer.play?.().catch(()=>{});
-        });
-      });
+  const clearBtn = ()=> setOneButtonLoading(btnEl, false);
+
+  const run = async () => {
+    try{
+      if (started) {
+        // انتظر لحظة صغيرة حتى يُرفق الـ HLS وتكون الـ seekable جاهزة
+        await new Promise(r => setTimeout(r, 150));
+
+        if (canSyncWithMain(activePlayer)) {
+          // كلاهما DVR/VOD → حافظ على المزامنة السابقة
+          const t = await getMainTime();
+          await seekActiveTo(t);
+        } else {
+          // البث حي بدون DVR → اذهب للحافة المباشرة
+          goLive(activePlayer);
+        }
+      }
+      await playEntity(activePlayer, true);
+    } finally {
+      clearBtn();
     }
+  };
+
+  if (activePlayer instanceof HTMLVideoElement) {
+    const onCanPlay = () => { activePlayer.removeEventListener('canplay', onCanPlay); run(); };
+    activePlayer.addEventListener('canplay', onCanPlay);
+    setTimeout(run, 1200); // احتياط في حال لم تصل canplay
+  } else {
+    run();
+  }
+}
 
     const clearBtn = ()=> setOneButtonLoading(btnEl,false);
     const onFirstFrame = ()=>{ clearBtn(); activePlayer?.removeEventListener('playing', onFirstFrame); };
