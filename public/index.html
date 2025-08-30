@@ -286,90 +286,81 @@
       return `https://player.vimeo.com/video/${id}?${q}`;
     }
 
-    function createVideo(container, url, isMain=false){
-      clearContainer(container);
+ <script>
+  // ... نفس المتغيرات الموجودة عندك بالأعلى
 
-      if(/youtube\.com|youtu\.be/i.test(url)){
-        const id = ytId(url); const div=document.createElement('div');
-        div.style.width='100%'; div.style.height='100%'; container.appendChild(div);
-        return new YT.Player(div,{videoId:id,playerVars:{autoplay:0,controls:0,rel:0,playsinline:1,muted:1}});
-      }
-      if(/vimeo\.com/i.test(url)){
-        const params={autoplay:0,muted:1,controls:0,playsinline:1,autopause:0};
-        const iframe=document.createElement('iframe'); iframe.src=vimeoEmbed(url,params);
-        iframe.setAttribute('allow','autoplay; fullscreen; picture-in-picture; encrypted-media'); iframe.allowFullscreen=true;
-        iframe.style.width='100%'; iframe.style.height='100%'; iframe.style.border='0'; container.appendChild(iframe);
-        return new Vimeo.Player(iframe,{autopause:false});
-      }
+  function createVideo(container, url, isMain=false){
+    clearContainer(container);
 
-      const video=document.createElement('video');
-      video.autoplay=false; video.playsInline=true; video.controls=false; video.muted=true;
-      video.preload='auto'; video.disableRemotePlayback=true;
-      video.style.width='100%'; video.style.height='100%';
-      video.style.objectFit=(splitMode===2||fillMode)?'cover':'contain';
-      container.appendChild(video);
-
-      if(/\.m3u8(\?|$)/i.test(url) && window.Hls && Hls.isSupported()){
-        const hls = new Hls({
-          enableWorker:true,
-          lowLatencyMode:true,
-          capLevelToPlayerSize:true,
-          backBufferLength:30,
-          maxBufferLength:10,
-          maxMaxBufferLength:20,
-          maxBufferHole:0.4,
-          liveSyncDuration:3,
-          liveMaxLatencyDuration:8,
-          startPosition:-1,
-          xhrSetup:(xhr)=>{xhr.setRequestHeader('Cache-Control','no-cache');xhr.setRequestHeader('Pragma','no-cache');}
-        });
-        hls.loadSource(url);
-        hls.attachMedia(video);
-
-        hls.on(Hls.Events.LEVEL_LOADED, (_, data)=>{
-          const d=data?.details;
-          const isLL = !!(d && ((d.partList?.length) || d.canBlockReload || d.canSkipUntil || d.canSkipDateRanges));
-          const target = d?.targetduration ?? 6;
-          if(isLL){
-            hls.config.lowLatencyMode = true;
-            hls.config.liveSyncDuration = isMain ? 2 : 3;
-            hls.config.maxBufferLength = 8;
-            hls.config.maxMaxBufferLength = 16;
-            hls.config.maxBufferHole = 0.4;
-          }else{
-            hls.config.lowLatencyMode = false;
-            hls.config.liveSyncDuration = Math.min(target*2.5, 12);
-            hls.config.maxBufferLength = 22;
-            hls.config.maxMaxBufferLength = 40;
-            hls.config.maxBufferHole = 0.1;
-          }
-        });
-
-        hls.on(Hls.Events.ERROR, (ev, data)=>{
-          if(!data?.fatal){
-            if(data?.details===Hls.ErrorDetails.BUFFER_STALLED_ERROR){
-              try{ video.currentTime += 0.25; }catch(e){}
-            }
-            return;
-          }
-          if(data.type===Hls.ErrorTypes.NETWORK_ERROR){ try{ hls.startLoad(); }catch(e){} }
-          else if(data.type===Hls.ErrorTypes.MEDIA_ERROR){
-            try{ hls.recoverMediaError(); }
-            catch(e){ try{ hls.swapAudioCodec(); hls.recoverMediaError(); }catch(_){} }
-          } else {
-            try{ hls.destroy(); }catch(e){}
-            setTimeout(()=>{ destroyAttachedHls(video); createVideo(container, url, isMain); }, 800);
-          }
-        });
-
-        hlsMap.set(video,hls);
-      }
-      else if(/\.mpd(\?|$)/i.test(url) && window.dashjs){
-        dashjs.MediaPlayer().create().initialize(video,url,false);
-      }
-      else { video.src=url; }
-      return video;
+    // فروع YouTube/Vimeo كما هي عندك
+    if(/youtube\.com|youtu\.be/i.test(url)){
+      const id = ytId(url); const div=document.createElement('div');
+      div.style.width='100%'; div.style.height='100%'; container.appendChild(div);
+      return new YT.Player(div,{videoId:id,playerVars:{autoplay:0,controls:0,rel:0,playsinline:1,muted:1}});
     }
+    if(/vimeo\.com/i.test(url)){
+      const params={autoplay:0,muted:1,controls:0,playsinline:1,autopause:0};
+      const iframe=document.createElement('iframe'); iframe.src=vimeoEmbed(url,params);
+      iframe.setAttribute('allow','autoplay; fullscreen; picture-in-picture; encrypted-media'); iframe.allowFullscreen=true;
+      iframe.style.width='100%'; iframe.style.height='100%'; iframe.style.border='0'; container.appendChild(iframe);
+      return new Vimeo.Player(iframe,{autopause:false});
+    }
+
+    const video=document.createElement('video');
+    video.playsInline=true; video.muted=true; video.autoplay=true; video.controls=false;
+    video.preload='auto'; video.disableRemotePlayback=true;
+    video.style.width='100%'; video.style.height='100%';
+    video.style.objectFit=(splitMode===2||fillMode)?'cover':'contain';
+    container.appendChild(video);
+
+    // نحاول التشغيل عند الجاهزية (يعمل على كل المتصفحات)
+    const autoPlayWhenReady = ()=>{ video.play?.().catch(()=>{}); };
+    video.addEventListener('loadedmetadata', autoPlayWhenReady, {once:true});
+    video.addEventListener('canplay',         autoPlayWhenReady, {once:true});
+
+    if(/\.m3u8(\?|$)/i.test(url) && window.Hls && Hls.isSupported()){
+      const hls=new Hls({
+        enableWorker:true, lowLatencyMode:true, capLevelToPlayerSize:true,
+        backBufferLength:30, maxBufferLength:10, maxMaxBufferLength:20,
+        maxBufferHole:0.4, liveSyncDuration:isMain?2:3, liveMaxLatencyDuration:8,
+        startPosition:-1,
+        xhrSetup:(xhr)=>{xhr.setRequestHeader('Cache-Control','no-cache');xhr.setRequestHeader('Pragma','no-cache');}
+      });
+      hls.loadSource(url);
+      hls.attachMedia(video);
+
+      // شغّل بمجرد解析 الـ Manifest
+      hls.on(Hls.Events.MANIFEST_PARSED, autoPlayWhenReady);
+
+      hls.on(Hls.Events.LEVEL_LOADED, (_, data)=>{
+        const d=data?.details, isLL=!!(d&&(d.partList?.length||d.canBlockReload||d.canSkipUntil||d.canSkipDateRanges));
+        const target=d?.targetduration ?? 6;
+        if(isLL){ hls.config.lowLatencyMode=true; hls.config.maxBufferLength=8;  hls.config.maxMaxBufferLength=16; hls.config.maxBufferHole=0.4; }
+        else    { hls.config.lowLatencyMode=false; hls.config.liveSyncDuration=Math.min(target*2.5,12); hls.config.maxBufferLength=22; hls.config.maxMaxBufferLength=40; hls.config.maxBufferHole=0.1; }
+      });
+
+      hls.on(Hls.Events.ERROR,(ev,data)=>{
+        if(!data?.fatal){
+          if(data?.details===Hls.ErrorDetails.BUFFER_STALLED_ERROR){ try{ video.currentTime += 0.25; }catch(e){} }
+          return;
+        }
+        if(data.type===Hls.ErrorTypes.NETWORK_ERROR){ try{ hls.startLoad(); }catch(e){} }
+        else if(data.type===Hls.ErrorTypes.MEDIA_ERROR){
+          try{ hls.recoverMediaError(); }catch(e){ try{ hls.swapAudioCodec(); hls.recoverMediaError(); }catch(_){ } }
+        } else {
+          try{ hls.destroy(); }catch(e){}
+          setTimeout(()=>{ destroyAttachedHls(video); createVideo(container,url,isMain); },800);
+        }
+      });
+
+      hlsMap.set(video,hls);
+    } else if(/\.mpd(\?|$)/i.test(url) && window.dashjs){
+      dashjs.MediaPlayer().create().initialize(video,url,false);
+    } else {
+      video.src=url;
+    }
+    return video;
+  }
 
     function initPlayers(){ applySplitClasses();
       if(!mainPlayer){ mainPlayer=createVideo(mainContainer, sources.main, true); }
@@ -480,22 +471,26 @@
     scrub.addEventListener('input',()=>{ isScrubbing=true; timeLabel.textContent=`${fmt(scrub.value)} / ${fmt(scrub.max||0)}`; });
     scrub.addEventListener('change',async()=>{ const nt=parseFloat(scrub.value)||0; showSync(true); await seekMainTo(nt); await seekActiveTo(nt); setTimeout(()=>showSync(false),250); isScrubbing=false; });
 
-    function switchCam(cam, btnEl){
-      currentCam=cam; setOneButtonLoading(btnEl,true);
-      activePlayer=createVideo(camContainer, sources[cam], false);
-      if(started){
-        playEntity(activePlayer,true).then(async()=>{ const t=await getMainTime(); showSync(true); await seekActiveTo(t); setTimeout(()=>showSync(false),250); });
-      }
-      const clearBtn=()=>setOneButtonLoading(btnEl,false);
-      const vid=camContainer.querySelector('video');
-      if(vid){
-        const off=()=>{ vid.removeEventListener('timeupdate',onTU); clearBtn(); };
-        const onTU=()=>off();
-        vid.addEventListener('timeupdate',onTU);
-        setTimeout(off,4000);
-      } else {
-        setTimeout(clearBtn,2500);
-      }
+      function switchCam(cam, btnEl){
+    currentCam = cam;
+    setOneButtonLoading(btnEl,true);
+
+    const prev = activePlayer;
+    activePlayer = createVideo(camContainer, sources[cam], false);
+
+    // شغّل عند الجاهزية + مزامنة مع الوقت الحالي للخط الرئيسي
+    if(started){
+      getMainTime().then(t=>{
+        seekActiveTo(t).finally(()=>{
+          activePlayer.play?.().catch(()=>{});
+        });
+      });
+    }
+
+    const clearBtn = ()=> setOneButtonLoading(btnEl,false);
+    const onFirstFrame = ()=>{ clearBtn(); activePlayer?.removeEventListener('playing', onFirstFrame); };
+    activePlayer?.addEventListener('playing', onFirstFrame);
+    setTimeout(clearBtn, 4000); // احتياط
     }
 
     function applySplitClasses(){
