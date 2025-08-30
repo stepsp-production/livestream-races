@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Universal Multi-Cam Player (Optimized HLS - Fixed)</title>
+  <title>Universal Multi-Cam Player (Mobile Landscape Tuned)</title>
 
   <!-- Players -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -12,139 +12,111 @@
   <script src="https://player.vimeo.com/api/player.js"></script>
 
   <style>
-    body {margin:0; background:#000; height:100vh; overflow:hidden;}
-    #playerContainer{position:relative;width:100%;height:100%}
-    .videoFrame{position:absolute;top:0;left:0;width:100%;height:100%;background:#000}
-    #mainPreview{position:absolute;top:20px;right:20px;width:25%;height:25%;border:2px solid #fff;cursor:pointer;z-index:5}
-    #camControls{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:6;}
-    #camControls button{margin:3px;padding:8px 12px;background:#e53935;color:#fff;border:0;border-radius:8px;cursor:pointer}
-    #gatePlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000a;z-index:10}
-    #gatePlay.hidden{display:none}
-    #startBtn{padding:12px 20px;border-radius:10px;background:#e53935;color:#fff;border:0;font-weight:bold;cursor:pointer}
-    #syncStatus{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);background:#000a;color:#fff;padding:6px 10px;border-radius:6px;z-index:7;}
+    :root{
+      --btn-bg:#e53935; --btn-bg-h:#d32f2f; --btn-bg-a:#b71c1c; --btn-txt:#fff;
+      --btn-ring:rgba(211,47,47,.28);
+      --panel-bg:#0b0b0fbb; --panel-bd:#ffffff26;
+      --accent:#40c4ff;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:#000;overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+
+    #playerContainer{position:relative;width:100vw;height:100vh}
+    .videoFrame{position:absolute;top:0;right:0;width:100%;height:100%;background:#000;overflow:hidden}
+
+    /* mini preview (audio source) */
+    #mainPreview{
+      position:absolute;top:18px;right:25px;width:20%;height:20%;
+      z-index:5;border:2px solid #fff2;border-radius:12px;cursor:pointer;
+      transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s
+    }
+    #mainPreview:hover{box-shadow:0 10px 30px #0008} /* (تصحيح بسيط للـpx لا يغيّر المظهر) */
+
+    /* split */
+    .split #mainPreview{top:0;right:0;left:auto;width:50%;height:100%;border-radius:0;border-width:0;cursor:default}
+    .split #activeCam{top:0;left:0;right:auto;width:50%;height:100%}
+    .split.fill #mainPreview video,.split.fill #activeCam video{object-fit:cover}
+    .split.fill #mainPreview iframe,.split.fill #activeCam iframe{position:absolute;inset:0;margin:auto;width:120%;height:120%}
+
+    .main-full #mainPreview{top:0;right:0;width:100%;height:100%;z-index:6;border:0;border-radius:0;cursor:zoom-out}
+    .main-full #activeCam{display:none}
+
+    .hint{position:absolute;top:20px;right:25px;z-index:7;background:#000a;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;border:1px solid #fff2}
+    .split .hint,.main-full .hint{display:none}
+
+    /* panels */
+    #utilityControls,#camControls,#globalControls,#syncStatus{position:absolute;z-index:8;display:flex;gap:8px;flex-wrap:wrap;transition:opacity .18s,transform .18s}
+
+    /* top-left tools (desktop default) */
+    #utilityControls{
+      top:12px;left:14px;background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);
+      backdrop-filter:blur(8px);align-items:center
+    }
+    #utilityControls .group{display:flex;gap:8px;align-items:center}
+    .divider{width:1px;height:26px;background:var(--panel-bd);margin:0 6px;border-radius:2px}
+
+    /* global scrubber (center bottom) */
+    #globalControls{
+      bottom:70px;left:50%;transform:translateX(-50%);
+      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);
+      backdrop-filter:blur(8px);align-items:center;min-width:320px
+    }
+    #globalControls.hidden{display:none}
+
+    #scrub{-webkit-appearance:none;appearance:none;width:320px;height:6px;border-radius:999px;background:#ffffff30;outline:none;margin:0 8px}
+    #scrub::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #0006;cursor:pointer}
+    #timeLabel{color:#fff;font-size:12px;min-width:108px;text-align:center}
+
+    /* camera buttons (desktop default) */
+    #camControls{
+      bottom:14px;left:50%;transform:translateX(-50%);
+      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);backdrop-filter:blur(8px)
+    }
+
+    #syncStatus{
+      bottom:122px;left:50%;transform:translateX(-50%);
+      background:#08131fbb;color:#e6f3ff;border:1px solid var(--panel-bd);
+      padding:6px 10px;border-radius:10px;font-size:12px;align-items:center;gap:6px
+    }
     #syncStatus.hidden{display:none}
-  </style>
-</head>
-<body>
-  <div id="playerContainer">
-    <div id="activeCam" class="videoFrame"></div>
-    <div id="mainPreview" class="videoFrame"></div>
-    <div id="gatePlay"><button id="startBtn">ابدأ التشغيل</button></div>
-    <div id="camControls">
-      <button data-cam="cam1">Cam1</button>
-      <button data-cam="cam2">Cam2</button>
-      <button data-cam="cam3">Cam3</button>
-      <button data-cam="cam4">Cam4</button>
-    </div>
-    <div id="syncStatus" class="hidden">جاري المزامنة…</div>
-  </div>
+    .dot{width:10px;height:10px;border-radius:50%;border:2px solid #8fd3ff;border-top-color:transparent;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
 
-  <script>
-    window.sources = {
-      main:  `/hls/live/playlist.m3u8`,
-      cam1:  `/hls/lastone/playlist.m3u8`,
-      cam2:  `/hls/live2/playlist.m3u8`,
-      cam3:  `/hls/live3/playlist.m3u8`,
-      cam4:  `/hls/live4/playlist.m3u8`
-    };
+    /* split: keep scrub bottom center as well */
+    .split #camControls{top:50%;left:12px;bottom:auto;transform:translateY(-50%);flex-direction:column;align-items:stretch}
+    .split #globalControls{bottom:70px;left:50%;transform:translateX(-50%);top:auto}
+    .split #syncStatus{bottom:122px;left:50%;transform:translateX(-50%);top:auto}
 
-    let mainPlayer, activePlayer;
-    let currentCam = "cam1";
-    const mainContainer=document.getElementById('mainPreview');
-    const camContainer=document.getElementById('activeCam');
-    const gatePlay=document.getElementById('gatePlay');
-    const startBtn=document.getElementById('startBtn');
-    const camControls=document.getElementById('camControls');
-    const syncStatus=document.getElementById('syncStatus');
-
-    const hlsMap=new WeakMap();
-
-    function destroyAttachedHls(videoEl){
-      const inst=hlsMap.get(videoEl);
-      if(inst){try{inst.destroy();}catch(e){} hlsMap.delete(videoEl);}
+    /* buttons look */
+    button{
+      -webkit-tap-highlight-color:transparent;appearance:none;border:0;outline:0;cursor:pointer;
+      background:var(--btn-bg);color:var(--btn-txt);padding:11px 14px;font-size:13px;line-height:1;font-weight:800;
+      border-radius:12px;letter-spacing:.2px;min-width:92px;position:relative;
+      box-shadow:0 8px 18px #000a,0 0 0 0 var(--btn-ring);
+      transition:transform .12s,box-shadow .12s,background .12s,opacity .12s,filter .12s;
+      opacity:.35;
     }
+    body.ui-awake button{opacity:1}
+    button:hover{background:var(--btn-bg-h);box-shadow:0 12px 26px #000c,0 0 0 6px var(--btn-ring)}
+    button:active{background:var(--btn-bg-a);transform:translateY(1px)}
+    button .sub{display:block;font-weight:600;font-size:10px;opacity:.85;margin-top:4px}
+    .loading{opacity:.85;pointer-events:none;filter:saturate(.85)}
+    .loading::after{content:"";position:absolute;inset:auto 8px 8px auto;width:16px;height:16px;border-radius:50%;border:2px solid #fff8;border-top-color:transparent;animation:spin .8s linear infinite}
 
-    function clearContainer(c){
-      while(c.firstChild){
-        const n=c.firstChild;
-        if(n.tagName==='VIDEO'){
-          try{n.pause()}catch(e){}
-          destroyAttachedHls(n);
-        }
-        c.removeChild(n);
-      }
-    }
+    #gatePlay{position:absolute;inset:0;z-index:7;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,rgba(0,0,0,.55),rgba(0,0,0,.2));backdrop-filter:blur(2px)}
+    #gatePlay.hidden{display:none}
+    .gate-card{background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:18px;padding:18px 20px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+    .icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--panel-bd);color:#fff;background:#111a;font-size:18px}
+    #startBtn{min-width:160px}
+    #zoomBtn{min-width:auto;padding:10px 12px}
+    .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bd);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
 
-    function attachHls(video,url,isMain=false){
-      const cfg={
-        enableWorker:true,
-        lowLatencyMode:true,
-        liveSyncDuration:isMain?2.5:3,
-        liveMaxLatencyDuration:8,
-        maxBufferLength:15,
-        maxMaxBufferLength:30,
-        maxBufferHole:0.1,
-        capLevelToPlayerSize:true,
-        xhrSetup:(xhr)=>{xhr.setRequestHeader('Cache-Control','no-cache');xhr.setRequestHeader('Pragma','no-cache');}
-      };
-      const hls=new Hls(cfg);
-      hls.loadSource(url);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED,()=>video.play().catch(()=>{}));
-      hls.on(Hls.Events.ERROR,(ev,data)=>{
-        if(!data.fatal) return;
-        if(data.type===Hls.ErrorTypes.NETWORK_ERROR){hls.startLoad();}
-        else if(data.type===Hls.ErrorTypes.MEDIA_ERROR){hls.recoverMediaError();}
-        else{destroyAttachedHls(video);attachHls(video,url,isMain);}
-      });
-      hlsMap.set(video,hls);
-      return hls;
-    }
-
-    function createVideo(container,url,isMain=false){
-      clearContainer(container);
-      const video=document.createElement('video');
-      video.autoplay=false;
-      video.playsInline=true;
-      video.controls=false;
-      video.muted=true;
-      video.style.width='100%';
-      video.style.height='100%';
-      container.appendChild(video);
-      if(/\.m3u8($|\?)/i.test(url)&&window.Hls&&Hls.isSupported()){
-        attachHls(video,url,isMain);
-      } else {
-        video.src=url;
-      }
-      return video;
-    }
-
-    function initPlayers(){
-      if(!mainPlayer){
-        mainPlayer=createVideo(mainContainer,sources.main,true);
-      }
-      activePlayer=createVideo(camContainer,sources[currentCam],false);
-    }
-
-    function startPlayback(){
-      gatePlay.classList.add('hidden');
-      if(mainPlayer && mainPlayer.play) mainPlayer.play().catch(()=>{});
-      if(activePlayer && activePlayer.play) activePlayer.play().catch(()=>{});
-    }
-
-    function switchCam(cam,btn){
-      currentCam=cam;
-      activePlayer=createVideo(camContainer,sources[cam],false);
-      if(activePlayer && activePlayer.play) activePlayer.play().catch(()=>{});
-    }
-
-    startBtn.addEventListener('click',startPlayback);
-    camControls.addEventListener('click',(e)=>{
-      const btn=e.target.closest('button[data-cam]');
-      if(!btn) return;
-      switchCam(btn.getAttribute('data-cam'),btn);
-    });
-    window.addEventListener('load',initPlayers);
-  </script>
-</body>
-</html>
+    /* ===== Mobile (landscape) tuning ===== */
+    @media (orientation: landscape) and (max-width: 900px){
+      #mainPreview{ width:45%; height:42%; left:12px; top:12px; border-width:1.5px;border-radius:10px; z-index:6; }
+      .hint{display:none}
+      #utilityControls{ top:14px; left:10px; padding:8px; gap:10px; }
+      #utilityControls .group{gap:6px}
+      #btnSplit, #btnFill, #btnSound{ padding:4px 4px; min-
