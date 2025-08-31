@@ -34,7 +34,7 @@
     #mainPreview{
       position:absolute;top:18px;right:25px;width:20%;height:20%;
       z-index:5;border:1px solid #fff2;border-radius:12px;cursor:pointer;
-      transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s, left .18s
+      transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s,left .18s
     }
     #mainPreview:hover{box-shadow:0 10px 30px #0008}
     #mainPreview video{display:block;width:100%;height:100%;object-fit:contain}
@@ -63,7 +63,7 @@
     /* global scrubber (center bottom) */
     #globalControls{
       bottom:70px;left:50%;transform:translateX(-50%);
-      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bد);
+      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);
       backdrop-filter:blur(8px);align-items:center;min-width:320px
     }
     #globalControls.hidden{display:none}
@@ -72,15 +72,15 @@
     #scrub::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #0006;cursor:pointer}
     #timeLabel{color:#fff;font-size:12px;min-width:108px;text-align:center}
 
-    /* camera buttons */
+    /* camera buttons (default desktop) */
     #camControls{
       bottom:14px;left:50%;transform:translateX(-50%);
-      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bد);backdrop-filter:blur(8px)
+      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);backdrop-filter:blur(8px)
     }
 
     #syncStatus{
       bottom:122px;left:50%;transform:translateX(-50%);
-      background:#08131fbb;color:#e6f3ff;border:1px solid var(--panel-bд);
+      background:#08131fbb;color:#e6f3ff;border:1px solid var(--panel-bd);
       padding:6px 10px;border-radius:10px;font-size:12px;align-items:center;gap:6px
     }
     #syncStatus.hidden{display:none}
@@ -108,7 +108,7 @@
     .loading{opacity:.85;pointer-events:none;filter:saturate(.85)}
     .loading::after{content:"";position:absolute;inset:auto 8px 8px auto;width:16px;height:16px;border-radius:50%;border:2px solid #fff8;border-top-color:transparent;animation:spin .8s linear infinite}
 
-    /* ✨ زر الصوت أيقونة صغيرة */
+    /* 🔊 زر الصوت أيقونة صغيرة */
     #btnSound{
       min-width:auto; padding:6px 8px; display:inline-flex; align-items:center; justify-content:center; gap:6px;
     }
@@ -120,25 +120,25 @@
 
     #gatePlay{position:absolute;inset:0;z-index:7;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,rgba(0,0,0,.55),rgba(0,0,0,.2));backdrop-filter:blur(2px)}
     #gatePlay.hidden{display:none}
-    .gate-card{background:var(--panel-bg);border:1px solid var(--panel-bд);border-radius:18px;padding:18px 20px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.45)}
-    .icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--panel-bд);color:#fff;background:#111a;font-size:18px}
+    .gate-card{background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:18px;padding:18px 20px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+    .icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--panel-bd);color:#fff;background:#111a;font-size:18px}
     #startBtn{min-width:160px}
     #zoomBtn{min-width:auto;padding:10px 12px}
-    .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bд);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
+    .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bd);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
 
     .swap-enter{opacity:0;transition:opacity .18s ease}
     .swap-enter.swap-enter-active{opacity:1}
 
-    /* ===== Mobile (landscape) tuning ===== */
+    /* ===== Mobile (landscape) ===== */
     @media (orientation: landscape) and (max-width: 900px){
       #mainPreview{width:30%;height:20%;left:25px; top:18px;border-width:1.5px;border-radius:10px; z-index:6}
       .hint{display:none}
 
-      /* انقل أدوات المرافق أسفل اليسار لكن ارفعها فوق الشريط */
+      /* ارفع أدوات المرافق فوق الشريط السفلي قليلاً */
       #utilityControls{
-        top:auto; 
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 110px); /* ↑ أعلى من الشريط */
-        left:10px; right:auto; 
+        top:auto;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 110px);
+        left:10px; right:auto;
         padding:6px; gap:4px;
       }
       /* عند التقسيم نرجّعها أعلى-يسار كما الأصلي */
@@ -150,7 +150,7 @@
       #btnSplit, #btnFill, #btnSound{padding:4px 4px; min-width:8px; font-size:8px; border-radius:10px}
       #zoomBtn{padding:4px 4px; min-width:auto}
 
-      /* دوك الكاميرات يظل في الوسط يسار */
+      /* دوك الكاميرات في يسار الوسط */
       #camControls{
         top:50%; left:8px; bottom:auto; transform:translateY(-50%);
         flex-direction:column; align-items:stretch; padding:8px; gap:6px;
@@ -177,7 +177,7 @@
         width:58vw; height:32vh; border-radius:12px;
       }
 
-      /* أدوات المرافق أعلى-يسار مدمجة ولا تتداخل */
+      /* أدوات المرافق أعلى-يسار مدمجة */
       #utilityControls{
         top:12px; left:10px; right:auto; bottom:auto;
         padding:6px; gap:6px;
@@ -188,6 +188,7 @@
         bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
         left:50%; transform:translateX(-50%);
         width: min(94vw, 560px); min-width:unset; padding:8px 10px;
+        z-index: 9;
       }
       #scrub{ width: clamp(140px, 56vw, 380px); }
 
@@ -205,10 +206,10 @@
         width: 46px; /* وضع مضغوط */
         transition: width .18s ease, box-shadow .18s ease;
         box-shadow: 0 8px 24px rgba(0,0,0,.35);
+        z-index: 8;
       }
       #camControls::-webkit-scrollbar{display:none}
 
-      /* مقبض لتوسيع الدوك على اللمس */
       #camControls::before{
         content: "≡";
         display:block; text-align:center;
@@ -218,11 +219,9 @@
         background:#0a2236aa;
       }
 
-      /* توسعة عند التحويم (ديسكتوب) أو عند إضافة الصنف expanded (موبايل) */
       #camControls:hover,
       #camControls.expanded{ width: 150px; }
 
-      /* أزرار الكاميرات: شكل pill ويظهر النص بالكامل عند التوسعة */
       #camControls button{
         display:flex; align-items:center; justify-content:flex-start;
         gap:8px; border-radius:12px; padding:8px 10px;
@@ -231,22 +230,14 @@
         box-shadow: inset 0 0 0 1px #0003;
         white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
       }
-      /* أيقونة نقطة صغيرة قبل النص تعطي إحساس "فلاش" */
       #camControls button::before{
         content:""; width:8px; height:8px; border-radius:50%; margin-left:4px;
         background: radial-gradient(circle at 30% 30%, #6cf, #39f);
         box-shadow: 0 0 10px #3af;
       }
-      /* في الوضع المضغوط، قصّ النص */
       #camControls:not(.expanded):not(:hover) button{ padding:8px 6px; }
       #camControls:not(.expanded):not(:hover) button span{ display:none; }
-
-      /* نجعل عناوين الأزرار داخل span ليتحكم فيها النمط أعلاه */
       #camControls button > span{ display:inline; }
-
-      /* منع التداخل مع الشريط */
-      #globalControls{ z-index: 9; }
-      #camControls{ z-index: 8; }
     }
   </style>
 </head>
@@ -316,7 +307,7 @@
       <div class="dot"></div><div>جاري المزامنة…</div>
     </div>
 
-    <!-- cameras (جعلنا عناوين الأزرار داخل span ليُقصّ في الوضع المضغوط) -->
+    <!-- cameras (العناوين داخل span لعرضها عند التوسعة) -->
     <div id="camControls" role="toolbar" aria-label="اختيار الكاميرات">
       <button data-cam="cam1"><span>Cam1</span></button>
       <button data-cam="cam2"><span>Cam2</span></button>
@@ -530,7 +521,7 @@
             } catch(e){}
           });
 
-          // اختيار مسار صوت (AAC إن وُجد) ثم التأكد من التشغيل عند فك الكتم
+          // اختيار مسار صوت (AAC إن وُجد)
           hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
             try{
               const tracks = data?.audioTracks || hls.audioTracks || [];
@@ -683,6 +674,7 @@
       if(d&&isFinite(d)) scrub.max=d; scrub.value=ct||0; timeLabel.textContent=`${fmt(ct)} / ${fmt(d||0)}`; },250); }
     function stopTimeTicker(){ if(ticker){ clearInterval(ticker); ticker=null; } }
 
+    // ===== حالة الأيقونة حسب الصوت =====
     async function reflectSoundState(){
       let muted = true;
       try{
@@ -700,6 +692,7 @@
       btnSound.title = muted ? 'تشغيل الصوت' : 'إيقاف الصوت';
     }
 
+    // ===== زر الصوت للـ main =====
     async function toggleSound(){
       if(!started){ await startPlayback(); }
 
@@ -756,100 +749,26 @@
       showSync(true); await seekMainTo(nt); const target=pdtAlignedTarget(nt); await seekActiveTo(target); setTimeout(()=>showSync(false),250);
     }
 
-    gPlay.addEventListener('click',togglePlayPause);
-    gBack.addEventListener('click',()=>jumpBy(-5));
-    gFwd.addEventListener('click',()=>jumpBy(+5));
-    scrub.addEventListener('input',()=>{ isScrubbing=true; timeLabel.textContent=`${fmt(scrub.value)} / ${fmt(scrub.max||0)}`; });
-    scrub.addEventListener('change',async()=>{ const nt=parseFloat(scrub.value)||0; showSync(true); await seekMainTo(nt); const target=pdtAlignedTarget(nt); await seekActiveTo(target); setTimeout(()=>showSync(false),250); isScrubbing=false; });
+    // ===== أحداث الواجهة (مرّة واحدة فقط) =====
+    startBtn.addEventListener('click',startPlayback);
+    mainContainer.addEventListener('click',toggleMainZoom);
+    zoomBtn.addEventListener('click',toggleMainZoom);
+    btnSplit.addEventListener('click',toggleSplitMode);
+    btnFill.addEventListener('click',toggleFillMode);
+    btnSound.addEventListener('click',toggleSound);
+    camControls.addEventListener('click',(e)=>{ const btn=e.target.closest('button[data-cam]'); if(!btn) return; switchCam(btn.getAttribute('data-cam'),btn); });
 
-    function applySplitClasses(){
-      root.classList.toggle('split',splitMode!==0);
-      root.classList.toggle('fill',(splitMode!==0&&(splitMode===2||fillMode)));
-      [mainContainer,camContainer].forEach(ct=>{ const v=ct.querySelector('video'); if(v){ v.style.objectFit=((splitMode===2||fillMode)?'cover':'contain'); } });
-    }
-    function toggleSplitMode(){ splitMode=(splitMode+1)%3; if(splitMode!==0 && isMainFull){ isMainFull=false; root.classList.remove('main-full'); } applySplitClasses(); }
-    function toggleFillMode(){ fillMode=!fillMode; applySplitClasses(); }
-    function toggleMainZoom(){ if(splitMode!==0) return; isMainFull=!isMainFull; root.classList.toggle('main-full',isMainFull); }
-
-    function switchCam(cam, btnEl){
-      currentCam=cam; setOneButtonLoading(btnEl,true);
-      const newcomer = createVideo(camContainer, sources[cam], 'active');
-
-      const promote = async () => {
-        const oldRef = activePlayer;
-        activePlayer = newcomer;
-        const mt = await getMainTime();
-        const target = pdtAlignedTarget(mt);
-        await seekActiveTo(target);
-        [...camContainer.children].slice(0,-1).forEach(ch=>destroyVideoNode(ch));
-        setTimeout(()=>setOneButtonLoading(btnEl,false),150);
-        startDriftCorrection();
-        if(oldRef && oldRef !== activePlayer){
-          try{ if(oldRef.pause) oldRef.pause(); }catch(e){}
-        }
-      };
-
-      if(newcomer instanceof HTMLVideoElement){
-        newcomer.addEventListener('canplay', promote, {once:true});
-        playEntity(newcomer,true);
-      } else {
-        promote(); // YT/Vimeo
-      }
-    }
-
-    // ===== تفاعل دوك الكاميرات على الموبايل: توسيع/تصغير بالسَّحب على المقبض أو النقر
+    // ===== دوك الكاميرات على الموبايل: توسيع/تصغير بالنقر (مع سحب للتمرير) =====
     (function cameraDockInteraction(){
       const isPortrait = () => window.matchMedia('(orientation: portrait)').matches;
       const dock = document.getElementById('camControls');
       if(!dock) return;
-
       let touchStartX=0, touchStartY=0, moved=false;
-
-      dock.addEventListener('touchstart', (e)=>{
-        if(!isPortrait()) return;
-        const t=e.touches[0]; touchStartX=t.clientX; touchStartY=t.clientY; moved=false;
-      }, {passive:true});
-
-      dock.addEventListener('touchmove', (e)=>{
-        if(!isPortrait()) return;
-        const t=e.touches[0];
-        const dy = Math.abs(t.clientY - touchStartY);
-        const dx = Math.abs(t.clientX - touchStartX);
-        if(dy > 6){ moved=true; }
-        // السماح بالتمرير الرأسي داخل الدوك
-      }, {passive:true});
-
-      dock.addEventListener('touchend', ()=>{
-        if(!isPortrait()) return;
-        // إذا لم يكن هناك تمرير، اعتبرها نقرة للتوسيع/الطي
-        if(!moved){
-          dock.classList.toggle('expanded');
-        }
-      });
-
-      // نقرة بالماوس للتوسيع أيضًا (تفيد المحاكيات)
-      dock.addEventListener('click', (e)=>{
-        if(!isPortrait()) return;
-        // تجنّب نقرة الأزرار نفسها
-        if(e.target.closest('button')) return;
-        dock.classList.toggle('expanded');
-      });
+      dock.addEventListener('touchstart', (e)=>{ if(!isPortrait()) return; const t=e.touches[0]; touchStartX=t.clientX; touchStartY=t.clientY; moved=false; }, {passive:true});
+      dock.addEventListener('touchmove',  (e)=>{ if(!isPortrait()) return; const t=e.touches[0]; const dy=Math.abs(t.clientY-touchStartY); if(dy>6){ moved=true; } }, {passive:true});
+      dock.addEventListener('touchend',   ()=>{ if(!isPortrait()) return; if(!moved){ dock.classList.toggle('expanded'); } });
+      dock.addEventListener('click',      (e)=>{ if(!isPortrait()) return; if(e.target.closest('button')) return; dock.classList.toggle('expanded'); });
     })();
-
-    startBtn.addEventListener('click',startPlayback);
-    const mainContainer = document.getElementById('mainPreview'); // (موجود سابقًا، إبقاء لتأكيد)
-    mainContainer.addEventListener('click',toggleMainZoom);
-    document.getElementById('zoomBtn').addEventListener('click',toggleMainZoom);
-
-    document.getElementById('btnSplit').addEventListener('click',toggleSplitMode);
-    document.getElementById('btnFill').addEventListener('click',toggleFillMode);
-    document.getElementById('btnSound').addEventListener('click',toggleSound);
-
-    const camControls = document.getElementById('camControls');
-    camControls.addEventListener('click',(e)=>{
-      const btn=e.target.closest('button[data-cam]'); if(!btn) return;
-      switchCam(btn.getAttribute('data-cam'),btn);
-    });
 
     // تهيئة مؤكدة سواء كان المصدر YouTube أو HLS/DASH
     window.onYouTubeIframeAPIReady = () => { initPlayersOnce(); };
