@@ -37,7 +37,7 @@
       transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s
     }
     #mainPreview:hover{box-shadow:0 10px 30px #0008}
-    /* تأكيد الرسم داخل المعاينة */
+    /* يضمن رسم الفيديو داخل المعاينة */
     #mainPreview video{display:block;width:100%;height:100%;object-fit:contain}
 
     /* split */
@@ -66,7 +66,7 @@
     /* global scrubber (center bottom) */
     #globalControls{
       bottom:70px;left:50%;transform:translateX(-50%);
-      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);
+      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bد);
       backdrop-filter:blur(8px);align-items:center;min-width:320px
     }
     #globalControls.hidden{display:none}
@@ -83,7 +83,7 @@
 
     #syncStatus{
       bottom:122px;left:50%;transform:translateX(-50%);
-      background:#08131fbb;color:#e6f3ff;border:1px solid var(--panel-bd);
+      background:#08131fbb;color:#e6f3ff;border:1px solid var(--panel-bد);
       padding:6px 10px;border-radius:10px;font-size:12px;align-items:center;gap:6px
     }
     #syncStatus.hidden{display:none}
@@ -113,8 +113,8 @@
 
     #gatePlay{position:absolute;inset:0;z-index:7;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,rgba(0,0,0,.55),rgba(0,0,0,.2));backdrop-filter:blur(2px)}
     #gatePlay.hidden{display:none}
-    .gate-card{background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:18px;padding:18px 20px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.45)}
-    .icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--panel-bd);color:#fff;background:#111a;font-size:18px}
+    .gate-card{background:var(--panel-bg);border:1px solid var(--panel-bد);border-radius:18px;padding:18px 20px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+    .icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--panel-bد);color:#fff;background:#111a;font-size:18px}
     #startBtn{min-width:160px}
     #zoomBtn{min-width:auto;padding:10px 12px}
     .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bد);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
@@ -220,7 +220,7 @@
 
   <!-- player logic -->
   <script>
-    // ===== إعدادات HLS محسّنة للبث المباشر =====
+    // ===== إعدادات HLS للبث المباشر =====
     const HLS_CONFIG = {
       lowLatencyMode: true,
       liveSyncDuration: 2,
@@ -240,7 +240,7 @@
       xhrSetup: (xhr) => { try { xhr.withCredentials = false; } catch(e){} }
     };
 
-    // ===== دعم الأكواد (AVC/H.264 أولاً، وإلا أي مدعوم) =====
+    // ===== فحص دعم الكودكات =====
     function codecPlayable(codec){
       try{
         const v=document.createElement('video');
@@ -252,13 +252,10 @@
       hevc: codecPlayable('hvc1.1.6.L93.B0') || codecPlayable('hev1.1.6.L93.B0')
     };
     function pickPlayableLevel(levels){
-      // 1) جرّب AVC
       let i = levels.findIndex(l=>/avc1/i.test(l?.codecs || l?.codecsVideo || ''));
       if(i>=0 && SUPPORTS.avc) return i;
-      // 2) إن لم يوجد، جرّب HEVC إن كان المتصفح يدعمه
       i = levels.findIndex(l=>/(hvc1|hev1)/i.test(l?.codecs || l?.codecsVideo || ''));
       if(i>=0 && SUPPORTS.hevc) return i;
-      // 3) وإلا اختر أول مستوى بدون تحقق (نترك MSE يقرر)
       return levels.length?0:-1;
     }
 
@@ -394,10 +391,10 @@
           hls.attachMedia(video);
           hls.loadSource(url);
 
-          // تتبع PDT
+          // تتبع PDT للمزامنة
           trackPDT(hls, video, role);
 
-          // اختر مستوى قابل للتشغيل (AVC أولاً؛ وإلا أي مدعوم)
+          // اختيار مستوى فيديو قابل للتشغيل
           hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
             try {
               const levels = data?.levels || [];
@@ -406,10 +403,28 @@
                 hls.nextLevel = idx;
                 hls.currentLevel = idx;
               } else {
-                console.warn(`${role} stream has no browser-playable level (no AVC/HEVC supported).`);
-                // سنترك hls يختار افتراضيًا؛ مع ذلك قد تبقى سوداء على متصفحات لا تدعم HEVC.
+                console.warn(`${role} stream has no browser-playable video level.`);
               }
             } catch(e){}
+          });
+
+          // اختيار مسار صوت (AAC إن وُجد) ثم التأكد من التشغيل عند فك الكتم
+          hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
+            try{
+              const tracks = data?.audioTracks || hls.audioTracks || [];
+              // ابحث عن AAC/mp4a أو أول مسار متاح
+              let pick = tracks.find(t => /mp4a|aac/i.test(
+                `${t?.codec||''} ${t?.name||''} ${t?.lang||''} ${t?.attrs?.CODECS||''}`
+              ));
+              if(!pick && tracks.length) pick = tracks[0];
+              if(pick){
+                // بعض إصدارات hls.js تستخدم id، وأخرى فهرس؛ الإثنان مدعومان
+                hls.audioTrack = pick.id ?? tracks.indexOf(pick);
+              }
+            }catch(e){}
+          });
+          hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, () => {
+            if(role==='main' && !video.muted){ kickPlay(); }
           });
 
           // مرونة أخطاء
@@ -547,9 +562,43 @@
       if(d&&isFinite(d)) scrub.max=d; scrub.value=ct||0; timeLabel.textContent=`${fmt(ct)} / ${fmt(d||0)}`; },250); }
     function stopTimeTicker(){ if(ticker){ clearInterval(ticker); ticker=null; } }
 
+    // ===== تحسين زر الصوت للـ main =====
+    async function toggleSound(){
+      // تأكد من وجود تفاعل وتشغيل قبل فك الكتم (يزيل قيود autoplay)
+      if(!started){ await startPlayback(); }
+
+      if(/vimeo\.com/i.test(sources.main) && mainPlayer && mainPlayer.getVolume){
+        try{
+          const v=await mainPlayer.getVolume();
+          if(v>0){ await mainPlayer.setVolume(0); }
+          else { await mainPlayer.setVolume(1); await mainPlayer.play().catch(()=>{}); }
+        }catch(e){}
+        return;
+      }
+      if(/youtube\.com|youtu\.be/i.test(sources.main) && mainPlayer && mainPlayer.isMuted){
+        try{
+          if(mainPlayer.isMuted()) mainPlayer.unMute(); else mainPlayer.mute();
+          try{ mainPlayer.playVideo(); }catch(e){}
+        }catch(e){}
+        return;
+      }
+      if(mainPlayer instanceof HTMLVideoElement){
+        try{
+          if(mainPlayer.muted){
+            mainPlayer.muted = false;
+            mainPlayer.volume = 1;
+            await mainPlayer.play().catch(()=>{});
+          }else{
+            mainPlayer.muted = true;
+          }
+        }catch(e){}
+      }
+    }
+
     async function togglePlayPause(){
       if(/vimeo\.com/i.test(sources.main) && mainPlayer && mainPlayer.getPaused){
-        const p=await mainPlayer.getPaused().catch(()=>null); if(p===null) return; if(p){ await mainPlayer.play().catch(()=>{}); } else { await mainPlayer.pause().catch(()=>{}); }
+        const p=await mainPlayer.getPaused().catch(()=>null); if(p===null) return;
+        if(p){ await mainPlayer.play().catch(()=>{}); } else { await mainPlayer.pause().catch(()=>{}); }
         const mt=await getMainTime(); const target=pdtAlignedTarget(mt); await seekActiveTo(target); return;
       }
       if(/youtube\.com|youtu\.be/i.test(sources.main) && mainPlayer && mainPlayer.getPlayerState){
@@ -582,12 +631,6 @@
     function toggleSplitMode(){ splitMode=(splitMode+1)%3; if(splitMode!==0 && isMainFull){ isMainFull=false; root.classList.remove('main-full'); } applySplitClasses(); }
     function toggleFillMode(){ fillMode=!fillMode; applySplitClasses(); }
     function toggleMainZoom(){ if(splitMode!==0) return; isMainFull=!isMainFull; root.classList.toggle('main-full',isMainFull); }
-
-    async function toggleSound(){
-      if(/vimeo\.com/i.test(sources.main)){ try{ const v=await mainPlayer.getVolume(); if(v>0){ await mainPlayer.setVolume(0); } else { await mainPlayer.setVolume(1); await mainPlayer.play().catch(()=>{}); } }catch(e){} return; }
-      if(/youtube\.com|youtu\.be/i.test(sources.main)){ try{ if(mainPlayer.isMuted()) mainPlayer.unMute(); else mainPlayer.mute(); try{mainPlayer.playVideo()}catch(e){} }catch(e){} return; }
-      if(mainPlayer instanceof HTMLVideoElement){ mainPlayer.muted=!mainPlayer.muted; if(mainPlayer.paused){ mainPlayer.play().catch(()=>{}); } }
-    }
 
     function switchCam(cam, btnEl){
       currentCam=cam; setOneButtonLoading(btnEl,true);
