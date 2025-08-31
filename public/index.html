@@ -222,7 +222,7 @@
         white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
       }
 
-      /* ✅ أيقونة الدوك حمراء في الهاتف العمودي */
+      /* ✅ تغيير لون الأيقونة الدائرية من الأزرق إلى الأحمر في الهاتف العمودي فقط */
       #camControls button::before{
         content:""; width:8px; height:8px; border-radius:50%; margin-left:4px;
         background: radial-gradient(circle at 30% 30%, #ff6b6b, #e53935);
@@ -234,7 +234,7 @@
       #camControls button > span{ display:inline; }
     }
 
-    /* حاوية التشغيل الخلفي (كاميرات مُشغلة دائمًا) */
+    /* حاوية التسخين المسبق - خارج الشاشة */
     #preloadBin{position:fixed; width:1px; height:1px; left:-9999px; top:-9999px; overflow:hidden; pointer-events:none; opacity:0;}
   </style>
 </head>
@@ -315,7 +315,7 @@
     </div>
   </div>
 
-  <!-- حاوية خفية لتشغيل الكاميرات دائمًا -->
+  <!-- حاوية خفية لتسخين المشغلات مسبقًا -->
   <div id="preloadBin" aria-hidden="true"></div>
 
   <!-- sources through Render proxy -->
@@ -340,14 +340,14 @@
       liveMaxLatencyDuration: 10,
       maxLiveSyncPlaybackRate: 1.2,
       capLevelToPlayerSize: true,
-      maxBufferLength: 10,
-      backBufferLength: 25,
+      maxBufferLength: 12,
+      backBufferLength: 30,
       maxFragLookUpTolerance: 0.5,
       enableWorker: true,
-      // retries سريعة لكن أقل إزعاجًا
-      fragLoadingMaxRetry: 8, fragLoadingRetryDelay: 400,
-      manifestLoadingMaxRetry: 6, manifestLoadingRetryDelay: 700,
-      levelLoadingMaxRetry: 6, levelLoadingRetryDelay: 700,
+      // تسريع محاولات التحميل الأولى
+      fragLoadingMaxRetry: 10, fragLoadingRetryDelay: 300,
+      manifestLoadingMaxRetry: 10, manifestLoadingRetryDelay: 600,
+      levelLoadingMaxRetry: 10, levelLoadingRetryDelay: 600,
       xhrSetup: (xhr)=>{ try{ xhr.withCredentials=false; }catch(e){} }
     };
     const isPortrait = ()=> window.matchMedia('(orientation: portrait)').matches;
@@ -400,9 +400,8 @@
     let mainPlayer, activePlayer, currentCam="cam1";
     let splitMode=0, isMainFull=false, fillMode=false, started=false, driftTimer=null, inited=false;
 
-    // مخزن كاميرات تعمل دائمًا (HTMLVideoElement لكل كاميرا)
-    const CAM_POOL = new Map(); // name -> video
-    const HLS_HANDLES = new Map(); // name -> hls instance
+    // مخزن التسخين المسبق: cam -> { wrapper, entity(HTMLVideoElement), hls }
+    const prewarmed = new Map();
 
     function ytId(u){ const m1=u.match(/[?&]v=([^&]+)/); if(m1) return m1[1]; const m2=u.match(/youtu\.be\/([^?&\/]+)/); if(m2) return m2[1];
                       const m3=u.match(/youtube\.com\/live\/([^?&\/]+)/); if(m3) return m3[1]; const m4=u.match(/embed\/([^?&\/]+)/); if(m4) return m4[1];
@@ -463,6 +462,7 @@
             const tracks=data?.audioTracks||hls.audioTracks||[]; let pick=tracks.find(t=>/mp4a|aac/i.test(`${t?.codec||''} ${t?.name||''} ${t?.lang||''} ${t?.attrs?.CODECS||''}`));
             if(!pick && tracks.length) pick=tracks[0]; if(pick){ hls.audioTrack=pick.id ?? tracks.indexOf(pick); }
           }catch(e){} });
+          hls.on(Hls.Events.AUDIO_TRACK_SWITCHED,()=>{ if(role==='main' && !video.muted) kickPlay(); });
           hls.on(Hls.Events.ERROR,(_,data)=>{ if(!data?.fatal) return; switch(data.type){
             case Hls.ErrorTypes.NETWORK_ERROR: try{ hls.startLoad(); }catch(e){} break;
             case Hls.ErrorTypes.MEDIA_ERROR:   try{ hls.recoverMediaError(); }catch(e){} break;
@@ -480,80 +480,6 @@
       return video;
     }
 
-    // ====== إنشاء فيديو HLS مُخصص لحوض الكاميرات (بدون wrapper) ======
-    function buildHlsVideo(url){
-      const v=document.createElement('video');
-      v.autoplay=false; v.playsInline=true; v.controls=false; v.muted=true; v.preload='auto'; v.crossOrigin='anonymous';
-      v.style.width='100%'; v.style.height='100%'; v.style.objectFit=((splitMode===2||fillMode)?'cover':'contain');
-      // ربط HLS
-      if(/\.m3u8(\?|$)/i.test(url)){
-        if(v.canPlayType('application/vnd.apple.mpegURL')){
-          v.src=url;
-        }else if(window.Hls && Hls.isSupported()){
-          const hls=new Hls(HLS_CONFIG); v.__hls=hls; hls.attachMedia(v); hls.loadSource(url);
-          trackPDT(hls, v, 'active');
-          hls.on(Hls.Events.MANIFEST_PARSED,(_,data)=>{ try{ const idx=pickPlayableLevel(data?.levels||[]); if(idx>=0){ hls.nextLevel=idx; hls.currentLevel=idx; } }catch(e){} });
-          hls.on(Hls.Events.ERROR,(_,data)=>{ if(!data?.fatal) return; switch(data.type){
-            case Hls.ErrorTypes.NETWORK_ERROR: try{ hls.startLoad(); }catch(e){} break;
-            case Hls.ErrorTypes.MEDIA_ERROR:   try{ hls.recoverMediaError(); }catch(e){} break;
-            default: try{ hls.destroy(); const _h=new Hls(HLS_CONFIG); v.__hls=_h; _h.attachMedia(v); _h.loadSource(url); trackPDT(_h, v, 'active'); }catch(e){} }});
-        }else{
-          v.src=url;
-        }
-      }else{
-        v.src=url;
-      }
-      bindAntiStall(v);
-      return v;
-    }
-
-    function ensureCamPrepared(name){
-      if(CAM_POOL.has(name)) return CAM_POOL.get(name);
-      const url = sources[name];
-      const v = buildHlsVideo(url);
-      v.style.display='none';
-      preloadBin.appendChild(v);
-      CAM_POOL.set(name, v);
-      // تذكّر مقبض HLS إن وُجد
-      if(v.__hls) HLS_HANDLES.set(name, v.__hls);
-      return v;
-    }
-
-    // تشغيل صامت لعناصر الحوض بعد أول تفاعل
-    async function armCamPool(){
-      Object.keys(sources).filter(k=>k!=='main').forEach(k=>{
-        const v = ensureCamPrepared(k);
-        v.play().catch(()=>{}); // سيعمل بعد السماح من المستخدم
-      });
-    }
-
-    async function playEntity(ent, keepMuted=true){
-      if(ent && ent.getVolume && ent.play){ try{ if(keepMuted) await ent.setVolume(0); await ent.play(); }catch(e){} return; }
-      if(ent && ent.playVideo){ try{ ent.mute(); ent.playVideo(); }catch(e){} return; }
-      if(ent instanceof HTMLVideoElement){ try{ ent.muted=!!keepMuted; await ent.play(); }catch(e){} }
-    }
-
-    async function startPlayback(){
-      if(started) return; started=true; gatePlay.classList.add('hidden');
-
-      // مُشغّل الخط الرئيسي والمعاينة كما هو
-      if(!mainPlayer){ mainPlayer=createVideo(mainContainer, sources.main, 'main'); }
-      await playEntity(mainPlayer,true);
-
-      // فعّل حوض الكاميرات وشغّلها مكتومة بالخلفية
-      armCamPool();
-
-      // جهّز الكاميرا الحالية فورًا الى الحاوية
-      const first = ensureCamPrepared(currentCam);
-      first.style.display='block';
-      camContainer.innerHTML=''; camContainer.appendChild(first);
-      activePlayer = first;
-      await playEntity(activePlayer,true);
-
-      globalControls.classList.remove('hidden'); await initDurations(); setTimeout(syncCams,220);
-      startDriftCorrection(); startTimeTicker(); reflectSoundState();
-    }
-
     function applySplitClasses(){
       root.classList.toggle('split',splitMode!==0);
       root.classList.toggle('fill',(splitMode!==0&&(splitMode===2||fillMode)));
@@ -562,6 +488,58 @@
     function toggleSplitMode(){ splitMode=(splitMode+1)%3; if(splitMode!==0 && isMainFull){ isMainFull=false; root.classList.remove('main-full'); } applySplitClasses(); }
     function toggleFillMode(){ fillMode=!fillMode; applySplitClasses(); }
     function toggleMainZoom(){ if(splitMode!==0) return; isMainFull=!isMainFull; root.classList.toggle('main-full',isMainFull); }
+
+    function initPlayers(){ if(!mainPlayer){ mainPlayer=createVideo(mainContainer, sources.main, 'main'); } activePlayer=createVideo(camContainer, sources[currentCam], 'active'); }
+    function initPlayersOnce(){ if(inited) return; inited=true; initPlayers(); }
+
+    async function playEntity(ent, keepMuted=true){
+      if(ent && ent.getVolume && ent.play){ try{ if(keepMuted) await ent.setVolume(0); await ent.play(); }catch(e){} return; }
+      if(ent && ent.playVideo){ try{ ent.mute(); ent.playVideo(); }catch(e){} return; }
+      if(ent instanceof HTMLVideoElement){ try{ ent.muted=!!keepMuted; await ent.play(); }catch(e){} }
+    }
+
+    // ====== التسخين المسبق لجميع الكاميرات (HLS) ======
+    function prewarmAllCams(){
+      const names = Object.keys(sources).filter(k=>k!=='main');
+      names.forEach(name=>{
+        if(prewarmed.has(name)) return;
+        const url = sources[name];
+        // نُنشئ فيديو في الحاوية الخفية ونبدأ تشغيله مكتومًا
+        const w = document.createElement('div');
+        w.style.position='absolute'; w.style.inset='0';
+        preloadBin.appendChild(w);
+        const ent = createVideo(w, url, 'active');
+        // تشغيل صامت (قد يرفض المتصفح قبل تفاعل المستخدم، لذا نستدعيه بعد startPlayback أيضًا)
+        Promise.resolve().then(()=>playEntity(ent,true));
+        if(ent instanceof HTMLVideoElement){
+          // معالجة التوقفات أثناء التسخين أيضًا
+          bindAntiStall(ent);
+        }
+        // خزّن المرجع لإعادة استخدامه بسرعة عند التبديل
+        prewarmed.set(name, { wrapper: w, entity: ent });
+      });
+    }
+
+    // عند استخدام كاميرا مُسخنة مسبقًا، ننقل عنصرها مباشرة إلى حاوية الكاميرا
+    function attachPrewarmedCam(name){
+      const rec = prewarmed.get(name);
+      if(!rec) return null;
+      camContainer.appendChild(rec.wrapper);
+      // تأكد من الـ object-fit بحسب حالة الملء
+      const v = rec.wrapper.querySelector('video'); if(v){ v.style.objectFit=((splitMode===2||fillMode)?'cover':'contain'); }
+      return rec.entity || rec.wrapper.querySelector('video');
+    }
+
+    async function startPlayback(){
+      if(started) return; started=true; gatePlay.classList.add('hidden');
+      await playEntity(mainPlayer,true);
+      await playEntity(activePlayer,true);
+      // بعد بدء التشغيل، سخّن باقي الكاميرات
+      prewarmAllCams();
+
+      globalControls.classList.remove('hidden'); await initDurations(); setTimeout(syncCams,300);
+      startDriftCorrection(); startTimeTicker(); reflectSoundState();
+    }
 
     function getMainTime(){ if(mainPlayer && mainPlayer.getCurrentTime) return mainPlayer.getCurrentTime(); if(mainPlayer instanceof HTMLVideoElement) return Promise.resolve(mainPlayer.currentTime||0); return Promise.resolve(0); }
     function getMainDuration(){
@@ -573,17 +551,9 @@
     function seekActiveTo(t){ if(activePlayer && activePlayer.setCurrentTime) return activePlayer.setCurrentTime(t).catch(()=>{}); if(activePlayer && activePlayer.seekTo){ try{ activePlayer.seekTo(t,true);}catch(e){} return Promise.resolve(); } if(activePlayer instanceof HTMLVideoElement){ activePlayer.currentTime=clampToSeekable(activePlayer,t);} return Promise.resolve(); }
 
     async function syncCams(showBadge=true){
-      // لا نُظهر لودر شامل؛ فقط شارة المزامنة عند الحاجة
-      try{
-        const t=await getMainTime();
-        const target=pdtAlignedTarget(t);
-        const at = (activePlayer?.currentTime)||0;
-        if(Math.abs((target||0) - at) > 0.12){
-          if(showBadge) showSync(true);
-          await seekActiveTo(target);
-          if(showBadge) setTimeout(()=>showSync(false),180);
-        }
-      }catch(e){}
+      if(showBadge) showSync(true); setCamButtonsLoading(true);
+      try{ const t=await getMainTime(); const target=pdtAlignedTarget(t); await seekActiveTo(target); }
+      finally{ setTimeout(()=>setCamButtonsLoading(false),180); if(showBadge) setTimeout(()=>showSync(false),250); }
     }
 
     function startDriftCorrection(){
@@ -591,17 +561,19 @@
       driftTimer=setInterval(async()=>{
         try{
           const mt=await getMainTime();
-          const at=activePlayer?.currentTime||0;
+          const atProm=(activePlayer && activePlayer.getCurrentTime)?activePlayer.getCurrentTime():Promise.resolve(activePlayer?.currentTime||0);
+          const at=await atProm;
           const wMain=(SYNC.main.pdtOffset!=null)? SYNC.main.pdtOffset + (mt||0) : null;
           const wAct =(SYNC.active.pdtOffset!=null)? SYNC.active.pdtOffset + (at||0) : null;
           const drift=(wMain!=null && wAct!=null)? Math.abs(wAct - wMain) : Math.abs((at||0)-(mt||0));
-          if(drift>0.22){ showSync(true); const target=pdtAlignedTarget(mt); await seekActiveTo(target); setTimeout(()=>showSync(false),160); }
+          if(drift>0.25){ showSync(true); const target=pdtAlignedTarget(mt); await seekActiveTo(target); setTimeout(()=>showSync(false),220); }
         }catch(e){}
-      }, 2500);
+      }, 3000);
     }
     function stopDriftCorrection(){ if(driftTimer){ clearInterval(driftTimer); driftTimer=null; } }
 
     function showSync(v){ syncStatus.classList.toggle('hidden',!v); }
+    function setCamButtonsLoading(s){ [...camControls.querySelectorAll('button')].forEach(b=>b.classList.toggle('loading',s)); }
     function setOneButtonLoading(btn,s){ if(btn) btn.classList.toggle('loading',s); }
 
     async function initDurations(){ const d=await getMainDuration(); scrub.max=(d&&isFinite(d))?d:0; }
@@ -656,7 +628,7 @@
     async function jumpBy(dlt){
       const t=await getMainTime(); const d=await getMainDuration();
       let nt=(t||0)+dlt; if(d&&isFinite(d)) nt=Math.min(Math.max(0,nt),d);
-      showSync(true); await seekMainTo(nt); const target=pdtAlignedTarget(nt); await seekActiveTo(target); setTimeout(()=>showSync(false),180);
+      showSync(true); await seekMainTo(nt); const target=pdtAlignedTarget(nt); await seekActiveTo(target); setTimeout(()=>showSync(false),250);
     }
 
     // مضاد التوقفات: نُدَف طفيفة عند waiting/stalled
@@ -668,9 +640,11 @@
           if(r && r.length){
             const end = r.end(r.length-1);
             const ct = video.currentTime || 0;
+            // نُدَف صغير إلى الأمام داخل النطاق
             const target = clampToSeekable(video, Math.min(end-0.05, ct+0.08));
             if(Math.abs(target - ct) > 0.01){ video.currentTime = target; }
           }else{
+            // محاولة تشغيل بسيطة
             video.play().catch(()=>{});
           }
         }catch(e){}
@@ -680,59 +654,79 @@
       video.addEventListener('suspend', ()=>{ setTimeout(nudge, 200); });
     }
 
-    // ====== التبديل الفوري باستخدام عناصر الحوض (بدون إنشاء/تدمير) ======
-    async function switchCam(cam, btnEl){
-      if(!sources[cam]) return;
-      const v = ensureCamPrepared(cam);
+    function switchCam(cam, btnEl){
+      currentCam=cam; setOneButtonLoading(btnEl,true);
 
-      // إظهار لودر فقط إذا غير جاهز التشغيل
-      const needsLoader = !(v.readyState >= 2 && v.seekable && v.seekable.length);
-      setOneButtonLoading(btnEl, needsLoader);
+      // إن وُجدت نسخة مُسخنة مسبقًا، استعملها فورًا (أسرع بكثير)
+      const warmed = attachPrewarmedCam(cam);
+      if(warmed){
+        const promote = async()=>{
+          const oldRef = activePlayer;
+          activePlayer = warmed;
+          // أعِد مزامنة زمن الكاميرا فورًا
+          const mt=await getMainTime(); const target=pdtAlignedTarget(mt); await seekActiveTo(target);
+          // دمّر أي عقد قديمة زائدة داخل الحاوية
+          [...camContainer.children].slice(0,-1).forEach(ch=>destroyVideoNode(ch));
+          // شغّل صامتًا لضمان استمرار البافر
+          playEntity(activePlayer, true);
+          // اربط مضاد التوقفات
+          bindAntiStall(activePlayer);
+          // لا تزيل السجل من prewarmed (أصبح wrapper ضمن الحاوية الآن)
+          setTimeout(()=>setOneButtonLoading(btnEl,false),130);
+          startDriftCorrection();
 
-      // انقل العنصر فورًا للحاوية
-      const prev = activePlayer;
-      v.style.display='block';
-      camContainer.innerHTML='';
-      camContainer.appendChild(v);
-      activePlayer = v;
-
-      // تشغيل صامت والتزامن اللحظي
-      await playEntity(activePlayer,true);
-      const mt=await getMainTime();
-      const target=pdtAlignedTarget(mt);
-      await seekActiveTo(target);
-
-      // أخفِ السابق وأعده للحوض
-      if(prev && prev!==activePlayer){
-        try{ prev.style.display='none'; preloadBin.appendChild(prev); }catch(e){}
+          // أعد تسخين الكاميرا السابقة بإرسالها إلى المخزن لإعادة الاستخدام لاحقًا
+          if(oldRef && oldRef!==activePlayer){
+            try{
+              const backWrap = document.createElement('div'); backWrap.style.position='absolute'; backWrap.style.inset='0';
+              const node = (oldRef instanceof HTMLVideoElement) ? oldRef.closest('div.swap-enter') : null;
+              if(node){ preloadBin.appendChild(node); prewarmed.set(cam+'_prev_'+Date.now(), {wrapper: node, entity: oldRef}); }
+            }catch(e){}
+          }
+        };
+        // إن كان HTMLVideoElement ننتظر canplay أول مرة فقط
+        if(warmed instanceof HTMLVideoElement){
+          if(warmed.readyState >= 2){ promote(); } else { warmed.addEventListener('canplay', promote, {once:true}); playEntity(warmed,true); }
+        }else{
+          promote();
+        }
+        return;
       }
 
-      // أزل اللودر سريعًا
-      setTimeout(()=>setOneButtonLoading(btnEl,false), needsLoader? 120 : 0);
-      startDriftCorrection();
+      // المسار الافتراضي (إذا لم يُسخّن مسبقًا)
+      const newcomer=createVideo(camContainer, sources[cam], 'active');
+      const promote=async()=>{
+        const oldRef=activePlayer; activePlayer=newcomer;
+        const mt=await getMainTime(); const target=pdtAlignedTarget(mt); await seekActiveTo(target);
+        [...camContainer.children].slice(0,-1).forEach(ch=>destroyVideoNode(ch));
+        setTimeout(()=>setOneButtonLoading(btnEl,false),150); startDriftCorrection();
+        if(oldRef && oldRef!==activePlayer){ try{ if(oldRef.pause) oldRef.pause(); }catch(e){} }
+        bindAntiStall(activePlayer);
+      };
+      if(newcomer instanceof HTMLVideoElement){ newcomer.addEventListener('canplay', promote,{once:true}); playEntity(newcomer,true); } else { promote(); }
     }
 
     /* ===== Events ===== */
     startBtn.addEventListener('click',startPlayback);
-    mainContainer.addEventListener('click',()=>{ if(splitMode!==0) return; isMainFull=!isMainFull; root.classList.toggle('main-full',isMainFull); });
-    zoomBtn.addEventListener('click',()=>{ if(splitMode!==0) return; isMainFull=!isMainFull; root.classList.toggle('main-full',isMainFull); });
-    btnSplit.addEventListener('click',()=>{ splitMode=(splitMode+1)%3; if(splitMode!==0 && isMainFull){ isMainFull=false; root.classList.remove('main-full'); } applySplitClasses(); });
-    btnFill.addEventListener('click',()=>{ fillMode=!fillMode; applySplitClasses(); });
+    mainContainer.addEventListener('click',toggleMainZoom);
+    zoomBtn.addEventListener('click',toggleMainZoom);
+    btnSplit.addEventListener('click',toggleSplitMode);
+    btnFill.addEventListener('click',toggleFillMode);
     btnSound.addEventListener('click',toggleSound);
     gPlay.addEventListener('click',togglePlayPause);
     gBack.addEventListener('click',()=>jumpBy(-5));
     gFwd.addEventListener('click',()=>jumpBy(+5));
     scrub.addEventListener('input',()=>{ isScrubbing=true; timeLabel.textContent=`${fmt(scrub.value)} / ${fmt(scrub.max||0)}`; });
-    scrub.addEventListener('change',async()=>{ const nt=parseFloat(scrub.value)||0; showSync(true); await seekMainTo(nt); const target=pdtAlignedTarget(nt); await seekActiveTo(target); setTimeout(()=>showSync(false),160); isScrubbing=false; });
+    scrub.addEventListener('change',async()=>{ const nt=parseFloat(scrub.value)||0; showSync(true); await seekMainTo(nt); const target=pdtAlignedTarget(nt); await seekActiveTo(target); setTimeout(()=>showSync(false),250); isScrubbing=false; });
 
-    // إغلاق الدوك تلقائيًا بعد اختيار كاميرا (موبايل عمودي)
+    // ✅ اغلاق الدوك تلقائياً بعد اختيار كاميرا (موبايل عمودي)
     camControls.addEventListener('click',(e)=>{
       const btn=e.target.closest('button[data-cam]'); if(!btn) return;
       switchCam(btn.getAttribute('data-cam'),btn);
-      if(isPortrait()){ setTimeout(()=> camControls.classList.remove('expanded'), 180); }
+      if(isPortrait()){ setTimeout(()=> camControls.classList.remove('expanded'), 220); }
     });
 
-    // منع touchend من التبديل إذا اللمسة على زر + فتح/غلق الدوك
+    // ✅ منع touchend من التبديل إذا اللمسة على زر
     (function cameraDockInteraction(){
       const dock=camControls;
       let touchStartY=0, moved=false;
@@ -742,15 +736,15 @@
       dock.addEventListener('click',(e)=>{ if(!isPortrait()) return; if(e.target.closest('button')) return; dock.classList.toggle('expanded'); });
     })();
 
-    // اغلاق بالضغط خارج الدوك (موبايل عمودي)
+    // ✅ اغلاق بالضغط خارج الدوك (موبايل عمودي)
     document.addEventListener('click',(e)=>{
       if(!isPortrait()) return;
       if(!camControls.contains(e.target)){ camControls.classList.remove('expanded'); }
     });
 
     /* ===== Init ===== */
-    window.onYouTubeIframeAPIReady=()=>{ if(!inited){ inited=true; /* سننشئ main عند التشغيل */ } };
-    window.addEventListener('DOMContentLoaded', ()=>{ if(!inited){ inited=true; /* defer الى startPlayback */ } });
+    window.onYouTubeIframeAPIReady=()=>{ initPlayersOnce(); };
+    window.addEventListener('DOMContentLoaded', ()=>{ initPlayersOnce(); });
 
     document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ /* يمكن تخفيض الجودة لاحقًا إن رغبت */ } });
 
