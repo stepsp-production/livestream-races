@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Universal Multi-Cam Player — HLS Sync+ (Mobile Landscape Tuned)</title>
+  <title>Universal Multi-Cam Player — HLS Sync+ (Mobile Tuned)</title>
 
   <!-- Players -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -34,10 +34,9 @@
     #mainPreview{
       position:absolute;top:18px;right:25px;width:20%;height:20%;
       z-index:5;border:1px solid #fff2;border-radius:12px;cursor:pointer;
-      transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s
+      transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s, left .18s
     }
     #mainPreview:hover{box-shadow:0 10px 30px #0008}
-    /* يضمن رسم الفيديو داخل المعاينة */
     #mainPreview video{display:block;width:100%;height:100%;object-fit:contain}
 
     /* split */
@@ -54,8 +53,6 @@
 
     /* panels */
     #utilityControls,#camControls,#globalControls,#syncStatus{position:absolute;z-index:8;display:flex;gap:8px;flex-wrap:wrap;transition:opacity .18s,transform .18s}
-
-    /* top-left tools (desktop default) */
     #utilityControls{
       top:12px;left:14px;background:var(--panel-bg);padding:10px;border-radius:14px;border:2px solid var(--panel-bd);
       backdrop-filter:blur(8px);align-items:center
@@ -83,7 +80,7 @@
 
     #syncStatus{
       bottom:122px;left:50%;transform:translateX(-50%);
-      background:#08131fbb;color:#e6f3ff;border:1px solid var(--panel-bد);
+      background:#08131fbb;color:#e6f3ff;border:1px solid var(--panel-bд);
       padding:6px 10px;border-radius:10px;font-size:12px;align-items:center;gap:6px
     }
     #syncStatus.hidden{display:none}
@@ -116,7 +113,6 @@
       min-width:auto; padding:6px 8px; display:inline-flex; align-items:center; justify-content:center; gap:6px;
     }
     #btnSound svg{display:inline-block; vertical-align:middle}
-    /* تبديل الأيقونة بالاعتماد على data-muted */
     #btnSound[data-muted="true"]  .icon-sound-on{display:none}
     #btnSound[data-muted="true"]  .icon-sound-off{display:inline}
     #btnSound[data-muted="false"] .icon-sound-on{display:inline}
@@ -124,11 +120,11 @@
 
     #gatePlay{position:absolute;inset:0;z-index:7;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,rgba(0,0,0,.55),rgba(0,0,0,.2));backdrop-filter:blur(2px)}
     #gatePlay.hidden{display:none}
-    .gate-card{background:var(--panel-bg);border:1px solid var(--panel-bد);border-radius:18px;padding:18px 20px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.45)}
-    .icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--panel-bد);color:#fff;background:#111a;font-size:18px}
+    .gate-card{background:var(--panel-bg);border:1px solid var(--panel-bд);border-radius:18px;padding:18px 20px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+    .icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--panel-bд);color:#fff;background:#111a;font-size:18px}
     #startBtn{min-width:160px}
     #zoomBtn{min-width:auto;padding:10px 12px}
-    .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bد);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
+    .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bд);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
 
     .swap-enter{opacity:0;transition:opacity .18s ease}
     .swap-enter.swap-enter-active{opacity:1}
@@ -138,35 +134,119 @@
       #mainPreview{width:30%;height:20%;left:25px; top:18px;border-width:1.5px;border-radius:10px; z-index:6}
       .hint{display:none}
 
-      /* ⤵️ انقل أدوات التحكم لأسفل-يسار على الموبايل */
+      /* انقل أدوات المرافق أسفل اليسار لكن ارفعها فوق الشريط */
       #utilityControls{
-        top:auto; bottom:14px; left:10px; right:auto;
+        top:auto; 
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 110px); /* ↑ أعلى من الشريط */
+        left:10px; right:auto; 
         padding:6px; gap:4px;
       }
-      #utilityControls .group{gap:4px}
-
-      /* عند تفعيل وضع التقسيم: ارجعها لأعلى-يسار كما الأصلي */
+      /* عند التقسيم نرجّعها أعلى-يسار كما الأصلي */
       .split #utilityControls{
-        top:18px; bottom:auto; left:10px;
-        padding:4px;
+        top:18px; bottom:auto; left:10px; padding:4px;
       }
 
+      #utilityControls .group{gap:4px}
       #btnSplit, #btnFill, #btnSound{padding:4px 4px; min-width:8px; font-size:8px; border-radius:10px}
       #zoomBtn{padding:4px 4px; min-width:auto}
-      #camControls{top:50%; left:8px; bottom:auto; transform:translateY(-50%); flex-direction:column; align-items:stretch; padding:8px; gap:6px}
+
+      /* دوك الكاميرات يظل في الوسط يسار */
+      #camControls{
+        top:50%; left:8px; bottom:auto; transform:translateY(-50%);
+        flex-direction:column; align-items:stretch; padding:8px; gap:6px;
+      }
       #camControls button{min-width:86px; font-size:9px; padding:8px 10px; border-radius:10px}
-      #globalControls{bottom:80px; left:50%; transform:translateX(-50%); padding:8px 10px; min-width:260px}
+
+      /* الشريط يبقى أسفل */
+      #globalControls{
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+        left:50%; transform:translateX(-50%);
+        padding:8px 10px; min-width:260px
+      }
       #scrub{width:220px}
-      #syncStatus{bottom:95px}
+      #syncStatus{bottom: calc(env(safe-area-inset-bottom, 0px) + 98px)}
       .split #globalControls{bottom:35px}
       .split #syncStatus{bottom:58px}
     }
 
-    @media (orientation: landscape) and (max-width: 640px){
-      #scrub{width:190px}
-      #camControls button{min-width:80px}
-      #btnSplit, #btnFill, #btnSound{min-width:30px;font-size:8px;padding:4px 6px}
-      #mainPreview{width:76%;height:46%}
+    /* ===== الهاتف: الوضع العمودي ===== */
+    @media (orientation: portrait) {
+      /* واجهة main مُحسّنة: أعلى-منتصف وبحجم متوازن */
+      #mainPreview{
+        top:12px; left:50%; right:auto; transform:translateX(-50%);
+        width:58vw; height:32vh; border-radius:12px;
+      }
+
+      /* أدوات المرافق أعلى-يسار مدمجة ولا تتداخل */
+      #utilityControls{
+        top:12px; left:10px; right:auto; bottom:auto;
+        padding:6px; gap:6px;
+      }
+
+      /* شريط التحكّم أسفل مركزي مع مساحة آمنة */
+      #globalControls{
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+        left:50%; transform:translateX(-50%);
+        width: min(94vw, 560px); min-width:unset; padding:8px 10px;
+      }
+      #scrub{ width: clamp(140px, 56vw, 380px); }
+
+      /* شارة المزامنة فوق الشريط قليلاً */
+      #syncStatus{ bottom: calc(env(safe-area-inset-bottom, 0px) + 58px); }
+
+      /* ⭐ دوك الكاميرات “فلاش”: شريط رأسي نحيف يتمدد عند التفاعل */
+      #camControls{
+        top: 60px; left: 6px; right: auto; bottom: auto; transform:none;
+        display:flex; flex-direction:column; align-items:stretch; gap:6px;
+        padding: 8px 6px;
+        max-height: 58vh; overflow:auto; -webkit-overflow-scrolling: touch;
+        background: linear-gradient(180deg, #0b0b0fb3, #0b0b0f99);
+        border: 1px solid var(--panel-bd); border-radius: 14px;
+        width: 46px; /* وضع مضغوط */
+        transition: width .18s ease, box-shadow .18s ease;
+        box-shadow: 0 8px 24px rgba(0,0,0,.35);
+      }
+      #camControls::-webkit-scrollbar{display:none}
+
+      /* مقبض لتوسيع الدوك على اللمس */
+      #camControls::before{
+        content: "≡";
+        display:block; text-align:center;
+        color:#cfe8ff; opacity:.9; font-weight:800; font-size:14px;
+        margin-bottom:6px; padding:4px 0;
+        border-radius:10px; border:1px solid var(--panel-bd);
+        background:#0a2236aa;
+      }
+
+      /* توسعة عند التحويم (ديسكتوب) أو عند إضافة الصنف expanded (موبايل) */
+      #camControls:hover,
+      #camControls.expanded{ width: 150px; }
+
+      /* أزرار الكاميرات: شكل pill ويظهر النص بالكامل عند التوسعة */
+      #camControls button{
+        display:flex; align-items:center; justify-content:flex-start;
+        gap:8px; border-radius:12px; padding:8px 10px;
+        min-width:auto; width: 100%; font-size:11px;
+        background: #1a1f2a; color:#fff; border:1px solid #ffffff1f;
+        box-shadow: inset 0 0 0 1px #0003;
+        white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      }
+      /* أيقونة نقطة صغيرة قبل النص تعطي إحساس "فلاش" */
+      #camControls button::before{
+        content:""; width:8px; height:8px; border-radius:50%; margin-left:4px;
+        background: radial-gradient(circle at 30% 30%, #6cf, #39f);
+        box-shadow: 0 0 10px #3af;
+      }
+      /* في الوضع المضغوط، قصّ النص */
+      #camControls:not(.expanded):not(:hover) button{ padding:8px 6px; }
+      #camControls:not(.expanded):not(:hover) button span{ display:none; }
+
+      /* نجعل عناوين الأزرار داخل span ليتحكم فيها النمط أعلاه */
+      #camControls button > span{ display:inline; }
+
+      /* منع التداخل مع الشريط */
+      #globalControls{ z-index: 9; }
+      #camControls{ z-index: 8; }
     }
   </style>
 </head>
@@ -236,14 +316,14 @@
       <div class="dot"></div><div>جاري المزامنة…</div>
     </div>
 
-    <!-- cameras -->
+    <!-- cameras (جعلنا عناوين الأزرار داخل span ليُقصّ في الوضع المضغوط) -->
     <div id="camControls" role="toolbar" aria-label="اختيار الكاميرات">
-      <button data-cam="cam1">Cam1</button>
-      <button data-cam="cam2">Cam2</button>
-      <button data-cam="cam3">Cam3</button>
-      <button data-cam="cam4">Cam4</button>
-      <button data-cam="cam5">Sineflex</button>
-      <button data-cam="cam6">Drone</button>
+      <button data-cam="cam1"><span>Cam1</span></button>
+      <button data-cam="cam2"><span>Cam2</span></button>
+      <button data-cam="cam3"><span>Cam3</span></button>
+      <button data-cam="cam4"><span>Cam4</span></button>
+      <button data-cam="cam5"><span>Sineflex</span></button>
+      <button data-cam="cam6"><span>Drone</span></button>
     </div>
   </div>
 
@@ -454,13 +534,11 @@
           hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
             try{
               const tracks = data?.audioTracks || hls.audioTracks || [];
-              // ابحث عن AAC/mp4a أو أول مسار متاح
               let pick = tracks.find(t => /mp4a|aac/i.test(
                 `${t?.codec||''} ${t?.name||''} ${t?.lang||''} ${t?.attrs?.CODECS||''}`
               ));
               if(!pick && tracks.length) pick = tracks[0];
               if(pick){
-                // بعض إصدارات hls.js تستخدم id، وأخرى فهرس؛ الإثنان مدعومان
                 hls.audioTrack = pick.id ?? tracks.indexOf(pick);
               }
             }catch(e){}
@@ -524,7 +602,6 @@
       await playEntity(mainPlayer,true); await playEntity(activePlayer,true);
       globalControls.classList.remove('hidden'); await initDurations(); setTimeout(syncCams,400);
       startDriftCorrection(); startTimeTicker();
-      // 🔔 عكس حالة الصوت على الأيقونة (مكتوم افتراضياً)
       reflectSoundState();
     }
     async function playEntity(ent, keepMuted=true){
@@ -606,7 +683,6 @@
       if(d&&isFinite(d)) scrub.max=d; scrub.value=ct||0; timeLabel.textContent=`${fmt(ct)} / ${fmt(d||0)}`; },250); }
     function stopTimeTicker(){ if(ticker){ clearInterval(ticker); ticker=null; } }
 
-    // ===== عكس حالة الصوت على الزر (للـ SVG) =====
     async function reflectSoundState(){
       let muted = true;
       try{
@@ -624,9 +700,7 @@
       btnSound.title = muted ? 'تشغيل الصوت' : 'إيقاف الصوت';
     }
 
-    // ===== تحسين زر الصوت للـ main =====
     async function toggleSound(){
-      // تأكد من وجود تفاعل وتشغيل قبل فك الكتم (يزيل قيود autoplay)
       if(!started){ await startPlayback(); }
 
       if(/vimeo\.com/i.test(sources.main) && mainPlayer && mainPlayer.getVolume){
@@ -723,13 +797,59 @@
       }
     }
 
+    // ===== تفاعل دوك الكاميرات على الموبايل: توسيع/تصغير بالسَّحب على المقبض أو النقر
+    (function cameraDockInteraction(){
+      const isPortrait = () => window.matchMedia('(orientation: portrait)').matches;
+      const dock = document.getElementById('camControls');
+      if(!dock) return;
+
+      let touchStartX=0, touchStartY=0, moved=false;
+
+      dock.addEventListener('touchstart', (e)=>{
+        if(!isPortrait()) return;
+        const t=e.touches[0]; touchStartX=t.clientX; touchStartY=t.clientY; moved=false;
+      }, {passive:true});
+
+      dock.addEventListener('touchmove', (e)=>{
+        if(!isPortrait()) return;
+        const t=e.touches[0];
+        const dy = Math.abs(t.clientY - touchStartY);
+        const dx = Math.abs(t.clientX - touchStartX);
+        if(dy > 6){ moved=true; }
+        // السماح بالتمرير الرأسي داخل الدوك
+      }, {passive:true});
+
+      dock.addEventListener('touchend', ()=>{
+        if(!isPortrait()) return;
+        // إذا لم يكن هناك تمرير، اعتبرها نقرة للتوسيع/الطي
+        if(!moved){
+          dock.classList.toggle('expanded');
+        }
+      });
+
+      // نقرة بالماوس للتوسيع أيضًا (تفيد المحاكيات)
+      dock.addEventListener('click', (e)=>{
+        if(!isPortrait()) return;
+        // تجنّب نقرة الأزرار نفسها
+        if(e.target.closest('button')) return;
+        dock.classList.toggle('expanded');
+      });
+    })();
+
     startBtn.addEventListener('click',startPlayback);
+    const mainContainer = document.getElementById('mainPreview'); // (موجود سابقًا، إبقاء لتأكيد)
     mainContainer.addEventListener('click',toggleMainZoom);
-    zoomBtn.addEventListener('click',toggleMainZoom);
-    btnSplit.addEventListener('click',toggleSplitMode);
-    btnFill.addEventListener('click',toggleFillMode);
-    btnSound.addEventListener('click',toggleSound);
-    camControls.addEventListener('click',(e)=>{ const btn=e.target.closest('button[data-cam]'); if(!btn) return; switchCam(btn.getAttribute('data-cam'),btn); });
+    document.getElementById('zoomBtn').addEventListener('click',toggleMainZoom);
+
+    document.getElementById('btnSplit').addEventListener('click',toggleSplitMode);
+    document.getElementById('btnFill').addEventListener('click',toggleFillMode);
+    document.getElementById('btnSound').addEventListener('click',toggleSound);
+
+    const camControls = document.getElementById('camControls');
+    camControls.addEventListener('click',(e)=>{
+      const btn=e.target.closest('button[data-cam]'); if(!btn) return;
+      switchCam(btn.getAttribute('data-cam'),btn);
+    });
 
     // تهيئة مؤكدة سواء كان المصدر YouTube أو HLS/DASH
     window.onYouTubeIframeAPIReady = () => { initPlayersOnce(); };
