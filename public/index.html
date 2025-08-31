@@ -150,7 +150,7 @@
       #btnSplit, #btnFill, #btnSound{padding:4px 4px; min-width:8px; font-size:8px; border-radius:10px}
       #zoomBtn{padding:4px 4px; min-width:auto}
 
-      /* دوك الكاميرات في يسار الوسط */
+      /* دوك الكاميرات يسار الوسط */
       #camControls{
         top:50%; left:8px; bottom:auto; transform:translateY(-50%);
         flex-direction:column; align-items:stretch; padding:8px; gap:6px;
@@ -307,7 +307,7 @@
       <div class="dot"></div><div>جاري المزامنة…</div>
     </div>
 
-    <!-- cameras (العناوين داخل span لعرضها عند التوسعة) -->
+    <!-- cameras -->
     <div id="camControls" role="toolbar" aria-label="اختيار الكاميرات">
       <button data-cam="cam1"><span>Cam1</span></button>
       <button data-cam="cam2"><span>Cam2</span></button>
@@ -333,7 +333,9 @@
 
   <!-- player logic -->
   <script>
-    // ===== إعدادات HLS للبث المباشر =====
+    /* =========================
+       1) إعدادات ومساعدات التشغيل
+       ========================= */
     const HLS_CONFIG = {
       lowLatencyMode: true,
       liveSyncDuration: 2,
@@ -353,7 +355,6 @@
       xhrSetup: (xhr) => { try { xhr.withCredentials = false; } catch(e){} }
     };
 
-    // ===== فحص دعم الكودكات =====
     function codecPlayable(codec){
       try{
         const v=document.createElement('video');
@@ -372,11 +373,10 @@
       return levels.length?0:-1;
     }
 
-    // ===== محاذاة عبر EXT-X-PROGRAM-DATE-TIME =====
-    const SYNC = {
-      main:   { pdtOffset: null, lastPDT: null },
-      active: { pdtOffset: null, lastPDT: null }
-    };
+    /* =========================
+       2) محاذاة عبر PDT
+       ========================= */
+    const SYNC = { main:{pdtOffset:null,lastPDT:null}, active:{pdtOffset:null,lastPDT:null} };
     function trackPDT(hls, video, role){
       if(!hls || !(video instanceof HTMLVideoElement)) return;
       hls.on(Hls.Events.FRAG_CHANGED, (_,data)=>{
@@ -396,6 +396,48 @@
         return pdtMain - SYNC.active.pdtOffset;
       }
       return mainCt;
+    }
+
+    /* =========================
+       3) مراجع DOM وحالة عامة
+       ========================= */
+    const root = document.getElementById('playerContainer');
+    const mainContainer = document.getElementById('mainPreview');
+    const camContainer  = document.getElementById('activeCam');
+    const gatePlay = document.getElementById('gatePlay');
+    const startBtn = document.getElementById('startBtn');
+    const camControls = document.getElementById('camControls');
+    const btnSplit = document.getElementById('btnSplit');
+    const btnFill  = document.getElementById('btnFill');
+    const btnSound = document.getElementById('btnSound');
+    const zoomBtn  = document.getElementById('zoomBtn');
+    const globalControls = document.getElementById('globalControls');
+    const gPlay = document.getElementById('gPlay');
+    const gBack = document.getElementById('gBack');
+    const gFwd  = document.getElementById('gFwd');
+    const scrub = document.getElementById('scrub');
+    const timeLabel = document.getElementById('timeLabel');
+    const syncStatus = document.getElementById('syncStatus');
+
+    let mainPlayer, activePlayer;
+    let currentCam = "cam1";
+    let splitMode = 0, isMainFull = false, fillMode = false, started = false, driftTimer = null;
+    let inited = false;
+
+    /* =========================
+       4) صُنّاع الفيديو
+       ========================= */
+    function ytId(u){
+      const m1=u.match(/[?&]v=([^&]+)/); if(m1) return m1[1];
+      const m2=u.match(/youtu\.be\/([^?&\/]+)/); if(m2) return m2[1];
+      const m3=u.match(/youtube\.com\/live\/([^?&\/]+)/); if(m3) return m3[1];
+      const m4=u.match(/embed\/([^?&\/]+)/); if(m4) return m4[1];
+      return u.split('/').pop();
+    }
+    function vimeoEmbed(u,p){
+      const m=u.match(/vimeo\.com\/(?:video\/)?(\d+)/); const id=m?m[1]:'';
+      const q=new URLSearchParams(p||{}).toString();
+      return `https://player.vimeo.com/video/${id}?${q}`;
     }
 
     function destroyVideoNode(node){
@@ -422,43 +464,6 @@
       return Math.min(Math.max(t, start + 0.05), end - 0.05);
     }
 
-    // ===== الحالة العامة =====
-    let mainPlayer, activePlayer;
-    let currentCam = "cam1";
-    let splitMode = 0, isMainFull = false, fillMode = false, started = false, driftTimer = null;
-    let inited = false;
-
-    const root = document.getElementById('playerContainer');
-    const mainContainer = document.getElementById('mainPreview');
-    const camContainer  = document.getElementById('activeCam');
-    const gatePlay = document.getElementById('gatePlay');
-    const startBtn = document.getElementById('startBtn');
-    const camControls = document.getElementById('camControls');
-    const btnSplit = document.getElementById('btnSplit');
-    const btnFill  = document.getElementById('btnFill');
-    const btnSound = document.getElementById('btnSound');
-    const zoomBtn  = document.getElementById('zoomBtn');
-    const globalControls = document.getElementById('globalControls');
-    const gPlay = document.getElementById('gPlay');
-    const gBack = document.getElementById('gBack');
-    const gFwd  = document.getElementById('gFwd');
-    const scrub = document.getElementById('scrub');
-    const timeLabel = document.getElementById('timeLabel');
-    const syncStatus = document.getElementById('syncStatus');
-
-    function ytId(u){
-      const m1=u.match(/[?&]v=([^&]+)/); if(m1) return m1[1];
-      const m2=u.match(/youtu\.be\/([^?&\/]+)/); if(m2) return m2[1];
-      const m3=u.match(/youtube\.com\/live\/([^?&\/]+)/); if(m3) return m3[1];
-      const m4=u.match(/embed\/([^?&\/]+)/); if(m4) return m4[1];
-      return u.split('/').pop();
-    }
-    function vimeoEmbed(u,p){
-      const m=u.match(/vimeo\.com\/(?:video\/)?(\d+)/); const id=m?m[1]:'';
-      const q=new URLSearchParams(p||{}).toString();
-      return `https://player.vimeo.com/video/${id}?${q}`;
-    }
-
     function createVideo(container, url, role){
       const wrapper = document.createElement('div');
       wrapper.style.position='absolute';
@@ -469,10 +474,9 @@
 
       // YouTube
       if(/youtube\.com|youtu\.be/i.test(url)){
-        const id = ytId(url);
         const div=document.createElement('div');
         div.style.width='100%'; div.style.height='100%'; wrapper.appendChild(div);
-        const player = new YT.Player(div,{videoId:id,playerVars:{autoplay:0,controls:0,rel:0,playsinline:1,muted:1}});
+        const player = new YT.Player(div,{videoId:ytId(url),playerVars:{autoplay:0,controls:0,rel:0,playsinline:1,muted:1}});
         return player;
       }
       // Vimeo
@@ -515,8 +519,6 @@
               if (idx >= 0) {
                 hls.nextLevel = idx;
                 hls.currentLevel = idx;
-              } else {
-                console.warn(`${role} stream has no browser-playable video level.`);
               }
             } catch(e){}
           });
@@ -525,36 +527,24 @@
           hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
             try{
               const tracks = data?.audioTracks || hls.audioTracks || [];
-              let pick = tracks.find(t => /mp4a|aac/i.test(
-                `${t?.codec||''} ${t?.name||''} ${t?.lang||''} ${t?.attrs?.CODECS||''}`
-              ));
+              let pick = tracks.find(t => /mp4a|aac/i.test(`${t?.codec||''} ${t?.name||''} ${t?.lang||''} ${t?.attrs?.CODECS||''}`));
               if(!pick && tracks.length) pick = tracks[0];
-              if(pick){
-                hls.audioTrack = pick.id ?? tracks.indexOf(pick);
-              }
+              if(pick){ hls.audioTrack = pick.id ?? tracks.indexOf(pick); }
             }catch(e){}
           });
-          hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, () => {
-            if(role==='main' && !video.muted){ kickPlay(); }
-          });
+          hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, () => { if(role==='main' && !video.muted) kickPlay(); });
 
           // مرونة أخطاء
           hls.on(Hls.Events.ERROR, (_, data)=>{
             if(!data?.fatal) return;
             switch(data.type){
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                try{ hls.startLoad(); }catch(e){}
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                try{ hls.recoverMediaError(); }catch(e){}
-                break;
+              case Hls.ErrorTypes.NETWORK_ERROR: try{ hls.startLoad(); }catch(e){} break;
+              case Hls.ErrorTypes.MEDIA_ERROR:   try{ hls.recoverMediaError(); }catch(e){} break;
               default:
                 try{
                   hls.destroy();
                   const _h=new Hls(HLS_CONFIG);
-                  video.__hls=_h;
-                  _h.attachMedia(video);
-                  _h.loadSource(url);
+                  video.__hls=_h; _h.attachMedia(video); _h.loadSource(url);
                   trackPDT(_h, video, role);
                 }catch(e){}
             }
@@ -575,30 +565,37 @@
       }
 
       // إزالة الطبقات الأقدم
-      video.addEventListener('canplay', ()=>{
-        [...container.children].slice(0,-1).forEach(ch=>destroyVideoNode(ch));
-      },{once:true});
-
+      video.addEventListener('canplay', ()=>{ [...container.children].slice(0,-1).forEach(ch=>destroyVideoNode(ch)); },{once:true});
       return video;
     }
 
-    function initPlayers(){
-      if(!mainPlayer){ mainPlayer=createVideo(mainContainer, sources.main, 'main'); }
-      activePlayer=createVideo(camContainer, sources[currentCam], 'active');
+    /* =========================
+       5) دوال التحكم (قبل ربط الأحداث)
+       ========================= */
+    function applySplitClasses(){
+      root.classList.toggle('split',splitMode!==0);
+      root.classList.toggle('fill',(splitMode!==0&&(splitMode===2||fillMode)));
+      [mainContainer,camContainer].forEach(ct=>{
+        const v=ct.querySelector('video'); if(v){ v.style.objectFit=((splitMode===2||fillMode)?'cover':'contain'); }
+      });
     }
+    function toggleSplitMode(){ splitMode=(splitMode+1)%3; if(splitMode!==0 && isMainFull){ isMainFull=false; root.classList.remove('main-full'); } applySplitClasses(); }
+    function toggleFillMode(){ fillMode=!fillMode; applySplitClasses(); }
+    function toggleMainZoom(){ if(splitMode!==0) return; isMainFull=!isMainFull; root.classList.toggle('main-full',isMainFull); }
+
+    function initPlayers(){ if(!mainPlayer){ mainPlayer=createVideo(mainContainer, sources.main, 'main'); } activePlayer=createVideo(camContainer, sources[currentCam], 'active'); }
     function initPlayersOnce(){ if(inited) return; inited=true; initPlayers(); }
 
-    async function startPlayback(){
-      if(started) return; started=true; gatePlay.classList.add('hidden');
-      await playEntity(mainPlayer,true); await playEntity(activePlayer,true);
-      globalControls.classList.remove('hidden'); await initDurations(); setTimeout(syncCams,400);
-      startDriftCorrection(); startTimeTicker();
-      reflectSoundState();
-    }
     async function playEntity(ent, keepMuted=true){
       if(ent && ent.getVolume && ent.play){ try{ if(keepMuted) await ent.setVolume(0); await ent.play(); }catch(e){} return; }
       if(ent && ent.playVideo){ try{ ent.mute(); ent.playVideo(); }catch(e){} return; }
       if(ent instanceof HTMLVideoElement){ try{ ent.muted=!!keepMuted; await ent.play(); }catch(e){} }
+    }
+    async function startPlayback(){
+      if(started) return; started=true; gatePlay.classList.add('hidden');
+      await playEntity(mainPlayer,true); await playEntity(activePlayer,true);
+      globalControls.classList.remove('hidden'); await initDurations(); setTimeout(syncCams,400);
+      startDriftCorrection(); startTimeTicker(); reflectSoundState();
     }
 
     function getMainTime(){
@@ -674,7 +671,6 @@
       if(d&&isFinite(d)) scrub.max=d; scrub.value=ct||0; timeLabel.textContent=`${fmt(ct)} / ${fmt(d||0)}`; },250); }
     function stopTimeTicker(){ if(ticker){ clearInterval(ticker); ticker=null; } }
 
-    // ===== حالة الأيقونة حسب الصوت =====
     async function reflectSoundState(){
       let muted = true;
       try{
@@ -692,7 +688,6 @@
       btnSound.title = muted ? 'تشغيل الصوت' : 'إيقاف الصوت';
     }
 
-    // ===== زر الصوت للـ main =====
     async function toggleSound(){
       if(!started){ await startPlayback(); }
 
@@ -749,39 +744,66 @@
       showSync(true); await seekMainTo(nt); const target=pdtAlignedTarget(nt); await seekActiveTo(target); setTimeout(()=>showSync(false),250);
     }
 
-    // ===== أحداث الواجهة (مرّة واحدة فقط) =====
+    function switchCam(cam, btnEl){
+      currentCam=cam; setOneButtonLoading(btnEl,true);
+      const newcomer = createVideo(camContainer, sources[cam], 'active');
+
+      const promote = async () => {
+        const oldRef = activePlayer;
+        activePlayer = newcomer;
+        const mt = await getMainTime();
+        const target = pdtAlignedTarget(mt);
+        await seekActiveTo(target);
+        [...camContainer.children].slice(0,-1).forEach(ch=>destroyVideoNode(ch));
+        setTimeout(()=>setOneButtonLoading(btnEl,false),150);
+        startDriftCorrection();
+        if(oldRef && oldRef !== activePlayer){ try{ if(oldRef.pause) oldRef.pause(); }catch(e){} }
+      };
+
+      if(newcomer instanceof HTMLVideoElement){
+        newcomer.addEventListener('canplay', promote, {once:true});
+        playEntity(newcomer,true);
+      } else {
+        promote(); // YT/Vimeo
+      }
+    }
+
+    /* =========================
+       6) ربط الأحداث (بعد تعريف كل الدوال)
+       ========================= */
     startBtn.addEventListener('click',startPlayback);
     mainContainer.addEventListener('click',toggleMainZoom);
     zoomBtn.addEventListener('click',toggleMainZoom);
     btnSplit.addEventListener('click',toggleSplitMode);
     btnFill.addEventListener('click',toggleFillMode);
     btnSound.addEventListener('click',toggleSound);
+    gPlay.addEventListener('click',togglePlayPause);
+    gBack.addEventListener('click',()=>jumpBy(-5));
+    gFwd.addEventListener('click',()=>jumpBy(+5));
+    scrub.addEventListener('input',()=>{ isScrubbing=true; timeLabel.textContent=`${fmt(scrub.value)} / ${fmt(scrub.max||0)}`; });
+    scrub.addEventListener('change',async()=>{ const nt=parseFloat(scrub.value)||0; showSync(true); await seekMainTo(nt); const target=pdtAlignedTarget(nt); await seekActiveTo(target); setTimeout(()=>showSync(false),250); isScrubbing=false; });
+
     camControls.addEventListener('click',(e)=>{ const btn=e.target.closest('button[data-cam]'); if(!btn) return; switchCam(btn.getAttribute('data-cam'),btn); });
 
-    // ===== دوك الكاميرات على الموبايل: توسيع/تصغير بالنقر (مع سحب للتمرير) =====
+    // دوك الكاميرات (موبايل عمودي): توسيع/تصغير بالنقر والسحب للتمرير
     (function cameraDockInteraction(){
       const isPortrait = () => window.matchMedia('(orientation: portrait)').matches;
-      const dock = document.getElementById('camControls');
-      if(!dock) return;
-      let touchStartX=0, touchStartY=0, moved=false;
-      dock.addEventListener('touchstart', (e)=>{ if(!isPortrait()) return; const t=e.touches[0]; touchStartX=t.clientX; touchStartY=t.clientY; moved=false; }, {passive:true});
-      dock.addEventListener('touchmove',  (e)=>{ if(!isPortrait()) return; const t=e.touches[0]; const dy=Math.abs(t.clientY-touchStartY); if(dy>6){ moved=true; } }, {passive:true});
+      const dock = camControls;
+      let touchStartY=0, moved=false;
+      dock.addEventListener('touchstart', (e)=>{ if(!isPortrait()) return; touchStartY=e.touches[0].clientY; moved=false; }, {passive:true});
+      dock.addEventListener('touchmove',  (e)=>{ if(!isPortrait()) return; if(Math.abs(e.touches[0].clientY-touchStartY)>6) moved=true; }, {passive:true});
       dock.addEventListener('touchend',   ()=>{ if(!isPortrait()) return; if(!moved){ dock.classList.toggle('expanded'); } });
       dock.addEventListener('click',      (e)=>{ if(!isPortrait()) return; if(e.target.closest('button')) return; dock.classList.toggle('expanded'); });
     })();
 
-    // تهيئة مؤكدة سواء كان المصدر YouTube أو HLS/DASH
+    /* =========================
+       7) تهيئة
+       ========================= */
     window.onYouTubeIframeAPIReady = () => { initPlayersOnce(); };
     window.addEventListener('DOMContentLoaded', () => { initPlayersOnce(); });
 
-    // (اختياري) تقليل التدفّق عند الخلفية
-    document.addEventListener('visibilitychange', ()=>{
-      if(document.hidden){
-        // يمكن لاحقًا خفض الجودة عبر hls.currentLevel = ...
-      }
-    });
+    document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ /* يمكن لاحقًا خفض الجودة */ } });
 
-    /* fade-in buttons on activity */
     (function autoUi(){
       let t=null;
       const wake=()=>{ document.body.classList.add('ui-awake'); clearTimeout(t); t=setTimeout(()=>document.body.classList.remove('ui-awake'), 2200); };
