@@ -111,11 +111,9 @@
     .loading{opacity:.85;pointer-events:none;filter:saturate(.85)}
     .loading::after{content:"";position:absolute;inset:auto 8px 8px auto;width:16px;height:16px;border-radius:50%;border:2px solid #fff8;border-top-color:transparent;animation:spin .8s linear infinite}
 
-    /* ✨ ضبط زر الصوت ليكون أيقونة صغيرة ولا يغطي الشاشة */
+    /* ✨ زر الصوت أيقونة صغيرة */
     #btnSound{
-      min-width:auto;            /* يلغي العرض الكبير الافتراضي */
-      padding:6px 8px;           /* حواف أصغر */
-      display:inline-flex; align-items:center; justify-content:center; gap:6px;
+      min-width:auto; padding:6px 8px; display:inline-flex; align-items:center; justify-content:center; gap:6px;
     }
     #btnSound svg{display:inline-block; vertical-align:middle}
     /* تبديل الأيقونة بالاعتماد على data-muted */
@@ -139,8 +137,20 @@
     @media (orientation: landscape) and (max-width: 900px){
       #mainPreview{width:30%;height:20%;left:25px; top:18px;border-width:1.5px;border-radius:10px; z-index:6}
       .hint{display:none}
-      #utilityControls{top:18px;left:10px;padding:4px; gap:4px}
+
+      /* ⤵️ انقل أدوات التحكم لأسفل-يسار على الموبايل */
+      #utilityControls{
+        top:auto; bottom:14px; left:10px; right:auto;
+        padding:6px; gap:4px;
+      }
       #utilityControls .group{gap:4px}
+
+      /* عند تفعيل وضع التقسيم: ارجعها لأعلى-يسار كما الأصلي */
+      .split #utilityControls{
+        top:18px; bottom:auto; left:10px;
+        padding:4px;
+      }
+
       #btnSplit, #btnFill, #btnSound{padding:4px 4px; min-width:8px; font-size:8px; border-radius:10px}
       #zoomBtn{padding:4px 4px; min-width:auto}
       #camControls{top:50%; left:8px; bottom:auto; transform:translateY(-50%); flex-direction:column; align-items:stretch; padding:8px; gap:6px}
