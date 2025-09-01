@@ -30,10 +30,10 @@
     #playerContainer{position:relative;width:100vw;height:100vh}
     .videoFrame{position:absolute;top:0;right:0;width:100%;height:100%;background:#000;overflow:hidden}
 
-    /* ==== mainPreview: ثابت أعلى اليمين ==== */
+    /* ==== المعاينة الرئيسية المصغّرة: أعلى اليمين ==== */
     #mainPreview{
       position:absolute;top:16px;right:20px;width:22%;height:24%;
-      z-index:5;border:1px solid #fff2;border-radius:16px;cursor:pointer;
+      z-index:6;border:1px solid #fff2;border-radius:18px;cursor:pointer;
       transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s,left .18s,border-radius .18s
     }
     #mainPreview:hover{box-shadow:0 10px 30px #0008}
@@ -45,15 +45,15 @@
     .split.fill #mainPreview video,.split.fill #activeCam video{object-fit:cover}
     .split.fill #mainPreview iframe,.split.fill #activeCam iframe{position:absolute;inset:0;margin:auto;width:120%;height:120%}
 
-    .main-full #mainPreview{top:0;right:0;width:100%;height:100%;z-index:6;border:0;border-radius:0;cursor:zoom-out}
+    .main-full #mainPreview{top:0;right:0;width:100%;height:100%;z-index:7;border:0;border-radius:0;cursor:zoom-out}
     .main-full #activeCam{display:none}
 
-    .hint{position:absolute;top:20px;right:20px;z-index:7;background:#000a;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;border:1px solid #fff2}
+    .hint{position:absolute;top:20px;right:20px;z-index:8;background:#000a;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;border:1px solid #fff2}
     .split .hint,.main-full .hint{display:none}
 
     /* panels */
     #utilityControls,#camControls,#globalControls,#syncStatus,#shortcutsBadge{
-      position:absolute;z-index:8;display:flex;gap:8px;flex-wrap:wrap;
+      position:absolute;z-index:10;display:flex;gap:8px;flex-wrap:wrap;
       transition:opacity .18s,transform .18s,top .18s,right .18s,left .18s
     }
 
@@ -71,7 +71,7 @@
     #globalControls{
       bottom:70px;left:50%;transform:translateX(-50%);
       background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);
-      backdrop-filter:blur(8px);align-items:center;min-width:320px
+      backdrop-filter:blur(8px);align-items:center;min-width:320px; z-index:20; /* أعلى من الكاميرات دائمًا */
     }
     #globalControls.hidden{display:none}
 
@@ -79,17 +79,18 @@
     #scrub::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #0006;cursor:pointer}
     #timeLabel{color:#fff;font-size:12px;min-width:108px;text-align:center}
 
-    /* camera buttons (default desktop) */
+    /* الكاميرات */
     #camControls{
       bottom:14px;left:50%;transform:translateX(-50%);
-      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);backdrop-filter:blur(8px)
+      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);backdrop-filter:blur(8px);
+      z-index:12;
     }
 
     /* شارة الاختصارات مفصولة أعلى اليسار */
     #shortcutsBadge{
       top:12px; left:12px; right:auto; gap:0;
       background:var(--panel-bg); color:#fff;
-      border:1px solid var(--panel-bd); border-radius:999px; padding:6px 10px; font-size:10px;
+      border:1px solid var(--panel-bد); border-radius:999px; padding:6px 10px; font-size:10px;
       backdrop-filter:blur(6px)
     }
 
@@ -98,6 +99,7 @@
       bottom:122px;left:50%;transform:translateX(-50%);
       background:#08131fcc;color:#e6f3ff;border:1px solid var(--panel-bd);
       padding:6px 10px;border-radius:10px;font-size:12px;align-items:center;gap:6px; box-shadow:none;
+      z-index:14;
     }
     #syncStatus.hidden{display:none}
     .dot{width:10px;height:10px;border-radius:50%;border:2px solid #8fd3ff;border-top-color:transparent;animation:spin .8s linear infinite}
@@ -111,31 +113,35 @@
     /* buttons */
     button{
       -webkit-tap-highlight-color:transparent;appearance:none;border:0;outline:0;cursor:pointer;
-      background:var(--btn-bg);color:var(--btn-txt);padding:11px 14px;font-size:11px;line-height:1;font-weight:800;
-      border-radius:12px;letter-spacing:.2px;min-width:92px;position:relative;
+      background:var(--btn-bg);color:var(--btn-txt);padding:11px 12px;font-size:12px;line-height:1;font-weight:800;
+      border-radius:12px;letter-spacing:.2px;min-width:auto;position:relative;
       box-shadow:0 8px 18px #000a,0 0 0 0 var(--btn-ring);
       transition:transform .12s,box-shadow .12s,background .12s,opacity .12s,filter .12s;
       opacity:.35;
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
     }
     body.ui-awake button{opacity:1}
     button:hover{background:var(--btn-bg-h);box-shadow:0 12px 26px #000c,0 0 0 6px var(--btn-ring)}
     button:active{background:var(--btn-bg-a);transform:translateY(1px)}
-    button .sub{display:block;font-weight:600;font-size:10px;opacity:.85;margin-top:4px}
     .loading{opacity:.9;pointer-events:none;filter:saturate(.9)}
     .loading::after{content:"";position:absolute;inset:auto 6px 6px auto;width:14px;height:14px;border-radius:50%;border:2px solid #fff8;border-top-color:transparent;animation:spin .6s linear infinite}
 
+    /* أيقونات الأزرار (بدون نص) */
+    .icon{width:16px;height:16px;display:inline-block}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
     /* 🔊 زر الصوت */
-    #btnSound{ min-width:auto; padding:6px 8px; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+    #btnSound{ min-width:auto; padding:6px 8px; }
     #btnSound svg{display:inline-block; vertical-align:middle}
     #btnSound[data-muted="true"]  .icon-sound-on{display:none}
     #btnSound[data-muted="true"]  .icon-sound-off{display:inline}
     #btnSound[data-muted="false"] .icon-sound-on{display:inline}
     #btnSound[data-muted="false"] .icon-sound-off{display:none}
 
-    #gatePlay{position:absolute;inset:0;z-index:7;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,rgba(0,0,0,.55),rgba(0,0,0,.2));backdrop-filter:blur(2px)}
+    #gatePlay{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,rgba(0,0,0,.55),rgba(0,0,0,.2));backdrop-filter:blur(2px)}
     #gatePlay.hidden{display:none}
     .gate-card{background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:18px;padding:18px 20px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.45)}
-    .icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--panel-bd);color:#fff;background:#111a;font-size:18px}
+    .gate-card .icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--panel-bd);color:#fff;background:#111a;font-size:18px}
     #startBtn{min-width:160px}
     #zoomBtn{min-width:auto;padding:10px 12px}
     .badge{font-size:10px;padding:3px 8px;border:1px solid var(--panel-bd);border-radius:999px;color:#cfe8ff;background:#0a2236aa}
@@ -143,14 +149,14 @@
     .swap-enter{opacity:0;transition:opacity .18s ease}
     .swap-enter.swap-enter-active{opacity:1}
 
-    /* ===== Mobile landscape ===== */
+    /* ===== موبايل أفقي ===== */
     @media (orientation: landscape) and (max-width: 900px){
       #mainPreview{ width:32%; height:28%; right:18px; top:14px; border-width:1.5px; border-radius:18px; z-index:6 }
       .hint{display:none}
-      #btnSplit, #btnFill, #btnSound{padding:6px 8px; min-width:auto; font-size:10px; border-radius:10px}
+      #btnSound{padding:6px 8px;}
       #zoomBtn{padding:6px 8px; min-width:auto}
       #camControls{ top:50%; left:8px; bottom:auto; transform:translateY(-50%); flex-direction:column; align-items:stretch; padding:8px; gap:6px; }
-      #camControls button{min-width:86px; font-size:9px; padding:8px 10px; border-radius:10px}
+      #camControls button{min-width:86px; font-size:10px; padding:8px 10px; border-radius:10px}
       #globalControls{ bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); left:50%; transform:translateX(-50%); padding:8px 10px; min-width:260px }
       #scrub{width:220px}
       #syncStatus{bottom: calc(env(safe-area-inset-bottom, 0px) + 98px)}
@@ -158,10 +164,10 @@
       .split #syncStatus{bottom:58px}
     }
 
-    /* ===== الهاتف: عمودي ===== */
+    /* ===== موبايل عمودي ===== */
     @media (orientation: portrait) {
-      #mainPreview{ top:12px; right:14px; left:auto; transform:none; width:58vw; height:36vh; border-radius:16px; }
-      #globalControls{ bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); left:50%; transform:translateX(-50%); width: min(94vw, 560px); min-width:unset; padding:8px 10px; z-index:9; }
+      #mainPreview{ top:12px; right:14px; left:auto; transform:none; width:58vw; height:36vh; border-radius:18px; }
+      #globalControls{ bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); left:50%; transform:translateX(-50%); width: min(94vw, 560px); min-width:unset; padding:8px 10px; z-index:20; }
       #scrub{ width: clamp(140px, 56vw, 380px); }
       #syncStatus{ bottom: calc(env(safe-area-inset-bottom, 0px) + 58px); }
 
@@ -174,7 +180,7 @@
         background: linear-gradient(180deg, #0b0b0fb3, #0b0b0f99);
         border: 1px solid var(--panel-bd); border-radius: 14px;
         width: 46px; transition: width .18s ease, box-shadow .18s ease;
-        box-shadow: 0 8px 24px rgba(0,0,0,.35); z-index: 8;
+        box-shadow: 0 8px 24px rgba(0,0,0,.35); z-index:12;
       }
       #camControls::-webkit-scrollbar{display:none}
       #camControls::before{
@@ -200,7 +206,7 @@
     #preloadBin{position:fixed; width:1px; height:1px; left:-9999px; top:-9999px; overflow:hidden; pointer-events:none; opacity:0;}
 
     /* ضغط الأزرار عند نقص الارتفاع */
-    #utilityControls.compact button.shrinkable{ padding:6px 8px; min-width:auto; font-size:10px; border-radius:10px }
+    #utilityControls.compact button{ padding:6px 8px; min-width:auto; font-size:10px; border-radius:10px }
   </style>
 </head>
 <body>
@@ -217,23 +223,56 @@
           <div style="color:#fff;font-weight:800;margin-bottom:6px">ابدأ التشغيل</div>
           <div style="font-size:12px;color:#eaeaf0b3">سيبدأ تشغيل الخط الرئيسي مع المزامنة • الصوت مكتوم افتراضيًا</div>
         </div>
-        <button id="startBtn" aria-label="ابدأ التشغيل الآن">تشغيل/بدء المزامنة<span class="sub">Space أو Enter</span></button>
+        <button id="startBtn" aria-label="ابدأ التشغيل الآن">تشغيل/بدء المزامنة<span class="sr-only">Space أو Enter</span></button>
       </div>
     </div>
 
     <!-- tools -->
     <div id="utilityControls" class="vertical">
       <div class="group">
-        <button id="btnSplit" class="shrinkable" aria-label="تبديل وضع التقسيم">تقسيم الشاشة<span class="sub">S</span></button>
-        <button id="btnFill"  class="shrinkable" aria-label="تبديل تعبئة الفيديو">ملء المحتوى</button>
+        <!-- أيقونة تقسيم الشاشة -->
+        <button id="btnSplit" aria-label="تبديل وضع التقسيم" title="تقسيم الشاشة">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="16" rx="3"></rect>
+            <line x1="12" y1="4" x2="12" y2="20"></line>
+          </svg>
+          <span class="sr-only">تقسيم الشاشة (S)</span>
+        </button>
+
+        <!-- أيقونة تعبئة/احتواء -->
+        <button id="btnFill" aria-label="تبديل تعبئة الفيديو" title="ملء المحتوى">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3,10 3,3 10,3"></polyline>
+            <polyline points="21,14 21,21 14,21"></polyline>
+            <line x1="3" y1="3" x2="10" y2="10"></line>
+            <line x1="21" y1="21" x2="14" y2="14"></line>
+          </svg>
+          <span class="sr-only">ملء/احتواء</span>
+        </button>
       </div>
+
       <span class="divider"></span>
+
       <div class="group">
         <button id="btnSound" aria-label="تشغيل/إيقاف الصوت" data-muted="true" title="تشغيل/إيقاف الصوت">
-          <svg class="icon-sound-on"  xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="green" stroke="green" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h4l5 4V6L7 10H3z"></path><path d="M14.5 8.5a4.5 4.5 0 0 1 0 6.4" fill="none"></path><path d="M16.8 6a8 8 0 0 1 0 12" fill="none"></path></svg>
-          <svg class="icon-sound-off" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="red" stroke="red" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h4l5 4V6L7 10H3z"></path><path d="M16 8l4 4m0 0l-4 4"></path></svg>
-          <span class="sub">M</span>
+          <!-- on -->
+          <svg class="icon-sound-on" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+               viewBox="0 0 24 24" fill="green" stroke="green" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M3 10v4h4l5 4V6L7 10H3z"></path>
+            <path d="M14.5 8.5a4.5 4.5 0 0 1 0 6.4" fill="none"></path>
+            <path d="M16.8 6a8 8 0 0 1 0 12" fill="none"></path>
+          </svg>
+          <!-- off -->
+          <svg class="icon-sound-off" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+               viewBox="0 0 24 24" fill="red" stroke="red" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M3 10v4h4l5 4V6L7 10H3z"></path>
+            <path d="M16 8l4 4m0 0l-4 4"></path>
+          </svg>
+          <span class="sr-only">M</span>
         </button>
+
         <button id="zoomBtn" title="تكبير/تصغير المعاينة" aria-label="تكبير المعاينة">🔍</button>
       </div>
     </div>
@@ -284,15 +323,14 @@
 
   <!-- player logic -->
   <script>
-    /* ===== إعدادات HLS (Duration فقط، بلا Count) ===== */
+    /* ===== HLS (Duration فقط) ===== */
     const HLS_CONFIG = {
       lowLatencyMode: true,
-      liveSyncDuration: 2,          // ثانيتان
-      liveMaxLatencyDuration: 8,    // حد أقصى للتأخير
+      liveSyncDuration: 2,
+      liveMaxLatencyDuration: 8,
       maxLiveSyncPlaybackRate: 1.25,
       capLevelToPlayerSize: true,
-
-      /* تخفيف التقطيع */
+      /* تقليل التقطيع */
       maxBufferLength: 8,
       backBufferLength: 18,
       maxFragLookUpTolerance: 0.3,
@@ -301,17 +339,14 @@
       highBufferWatchdogPeriod: 2,
       startFragPrefetch: true,
       autoStartLoad: true,
-
       /* تقدير بدئي مناسب */
       startLevel: -1,
       abrEwmaDefaultEstimate: 3000000,
       enableWorker: true,
-
       /* محاولات شبكية */
       fragLoadingMaxRetry: 8, fragLoadingRetryDelay: 300,
       manifestLoadingMaxRetry: 8, manifestLoadingRetryDelay: 600,
       levelLoadingMaxRetry: 6, levelLoadingRetryDelay: 600,
-
       xhrSetup: (xhr)=>{ try{ xhr.withCredentials=false; }catch(e){} }
     };
     const isPortrait = ()=> window.matchMedia('(orientation: portrait)').matches;
@@ -365,8 +400,42 @@
     let mainPlayer, activePlayer, currentCam="cam1";
     let splitMode=0, isMainFull=false, fillMode=false, started=false, driftTimer=null, inited=false;
 
-    // cam -> { wrapper, entity }
-    const prewarmed = new Map();
+    /* ===== طابور تسخين مسبق محدود ===== */
+    const PREWARM_CONCURRENCY = 2;
+    const prewarmed = new Map();             // cam -> { wrapper, entity }
+    const prewarmQueue = [];
+    let prewarmActive = 0;
+
+    function enqueuePrewarm(name){
+      if(prewarmed.has(name)) return;
+      if(prewarmQueue.includes(name)) return;
+      prewarmQueue.push(name);
+      pumpPrewarm();
+    }
+    function pumpPrewarm(){
+      while(prewarmActive < PREWARM_CONCURRENCY && prewarmQueue.length){
+        const name = prewarmQueue.shift();
+        prewarmActive++;
+        doPrewarm(name).finally(()=>{ prewarmActive--; pumpPrewarm(); });
+      }
+    }
+    function doPrewarm(name){
+      return new Promise(resolve=>{
+        const url = sources[name];
+        const w = document.createElement('div');
+        w.style.position='absolute'; w.style.inset='0';
+        preloadBin.appendChild(w);
+        const ent = createVideo(w, url, 'active');
+        // تشغيل مكتوم بمجرد الأمر (قد يرفض، لا مشكلة)
+        Promise.resolve().then(()=>playEntity(ent,true));
+        if(ent instanceof HTMLVideoElement){
+          ent.addEventListener('canplay', ()=>resolve(), {once:true});
+        }else{
+          resolve();
+        }
+        prewarmed.set(name, { wrapper: w, entity: ent });
+      });
+    }
 
     function ytId(u){ const m1=u.match(/[?&]v=([^&]+)/); if(m1) return m1[1]; const m2=u.match(/youtu\.be\/([^?&\/]+)/); if(m2) return m2[1];
                       const m3=u.match(/youtube\.com\/live\/([^?&\/]+)/); if(m3) return m3[1]; const m4=u.match(/embed\/([^?&\/]+)/); if(m4) return m4[1];
@@ -475,20 +544,9 @@
       if(ent instanceof HTMLVideoElement){ try{ ent.muted=!!keepMuted; await ent.play(); }catch(e){} }
     }
 
-    /* ===== تسخين مسبق دائم ===== */
+    /* ===== بدء تشغيل وتسخين محدود ===== */
     function prewarmAllCams(){
-      const names = Object.keys(sources).filter(k=>k!=='main');
-      names.forEach(name=>{
-        if(prewarmed.has(name)) return;
-        const url = sources[name];
-        const w = document.createElement('div');
-        w.style.position='absolute'; w.style.inset='0';
-        preloadBin.appendChild(w);
-        const ent = createVideo(w, url, 'active');
-        Promise.resolve().then(()=>playEntity(ent,true));
-        if(ent instanceof HTMLVideoElement){ bindAntiStall(ent); }
-        prewarmed.set(name, { wrapper: w, entity: ent });
-      });
+      Object.keys(sources).filter(k=>k!=='main').forEach(enqueuePrewarm);
     }
 
     function attachPrewarmedCam(name){
@@ -520,9 +578,9 @@
     function seekActiveTo(t){ if(activePlayer && activePlayer.setCurrentTime) return activePlayer.setCurrentTime(t).catch(()=>{}); if(activePlayer && activePlayer.seekTo){ try{ activePlayer.seekTo(t,true);}catch(e){} return Promise.resolve(); } if(activePlayer instanceof HTMLVideoElement){ activePlayer.currentTime=clampToSeekable(activePlayer,t);} return Promise.resolve(); }
 
     async function syncCams(showBadge=true){
-      if(showBadge) showSync(true); setCamButtonsLoading(true);
+      if(showBadge) showSync(true);
       try{ const t=await getMainTime(); const target=pdtAlignedTarget(t); await seekActiveTo(target); }
-      finally{ setTimeout(()=>setCamButtonsLoading(false),80); if(showBadge) setTimeout(()=>showSync(false),150); }
+      finally{ if(showBadge) setTimeout(()=>showSync(false),150); }
     }
 
     function startDriftCorrection(){
@@ -542,7 +600,6 @@
     function stopDriftCorrection(){ if(driftTimer){ clearInterval(driftTimer); driftTimer=null; } }
 
     function showSync(v){ syncStatus.classList.toggle('hidden',!v); }
-    function setCamButtonsLoading(s){ [...camControls.querySelectorAll('button')].forEach(b=>b.classList.toggle('loading',s)); }
     function setOneButtonLoading(btn,s){ if(btn) btn.classList.toggle('loading',s); }
 
     async function initDurations(){ const d=await getMainDuration(); scrub.max=(d&&isFinite(d))?d:0; }
@@ -603,13 +660,11 @@
     /* ===== Anti-stall Watchdog ===== */
     function bindAntiStall(video){
       if(!(video instanceof HTMLVideoElement)) return;
-      let lastTime = 0, lastTick = performance.now();
+      let lastTime = 0;
       const watchdog = ()=>{
-        const now = performance.now();
         const ct = video.currentTime || 0;
         const progressed = Math.abs(ct - lastTime) > 0.02;
         lastTime = ct;
-
         if(!progressed || video.readyState < 3){
           try{
             const r = video.seekable;
@@ -640,7 +695,7 @@
           [...camContainer.children].slice(0,-1).forEach(ch=>destroyVideoNode(ch));
           playEntity(activePlayer, true);
           if(activePlayer instanceof HTMLVideoElement) bindAntiStall(activePlayer);
-          setTimeout(()=>setOneButtonLoading(btnEl,false),60);
+          setTimeout(()=>setOneButtonLoading(btnEl,false),80);
           startDriftCorrection();
         };
         if(warmed instanceof HTMLVideoElement && warmed.readyState < 2){
@@ -654,7 +709,7 @@
 
       const newcomer=createVideo(camContainer, sources[cam], 'active');
       const promote=async()=>{
-        const oldRef=activePlayer; activePlayer=newcomer;
+        activePlayer=newcomer;
         const mt=await getMainTime(); const target=pdtAlignedTarget(mt); await seekActiveTo(target);
         [...camContainer.children].slice(0,-1).forEach(ch=>destroyVideoNode(ch));
         setTimeout(()=>setOneButtonLoading(btnEl,false),100); startDriftCorrection();
@@ -678,12 +733,9 @@
         utilityControls.classList.add('vertical');
         utilityControls.classList.remove('horizontal');
 
-        // قياس بعد تبديل الاتجاه
         requestAnimationFrame(()=>{
           const cr = utilityControls.getBoundingClientRect();
-          let left = mp.left - cr.width - margin;
-          if(left < margin) left = margin;
-
+          let left = mp.left - cr.width - margin; if(left < margin) left = margin;
           let top = mp.top + (mp.height - cr.height)/2;
           top = Math.max(margin, Math.min(top, window.innerHeight - cr.height - margin));
 
