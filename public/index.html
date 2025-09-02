@@ -56,22 +56,15 @@
     #utilityControls .group{display:flex;gap:6px;align-items:center}
     .divider{width:1px;height:22px;background:var(--panel-bd);border-radius:2px;margin:0 4px}
 
-/* كان: position: absolute ضمن الحاوية وبـ bottom:70px */
-#globalControls{
-  position: fixed;                          /* يبقيه مثبتًا بأسفل الشاشة */
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--panel-bg);
-  padding: 10px;
-  border-radius: 14px;
-  border: 1px solid var(--panel-bd);
-  backdrop-filter: blur(8px);
-  align-items: center;
-  min-width: 320px;
-  z-index: 9999;                            /* للتأكد أنه فوق أي عنصر */
-}
-
+    #globalControls{
+      bottom:70px;left:50%;transform:translateX(-50%);
+      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);
+      backdrop-filter:blur(8px);align-items:center;min-width:320px
+    }
+    #globalControls.hidden{display:none}
+    #scrub{-webkit-appearance:none;appearance:none;width:320px;height:6px;border-radius:999px;background:#ffffff30;outline:none;margin:0 8px}
+    #scrub::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #0006;cursor:pointer}
+    #timeLabel{color:#fff;font-size:12px;min-width:108px;text-align:center}
 
     /* أزرار الكاميرات */
     #camControls{
