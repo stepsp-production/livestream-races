@@ -9,7 +9,7 @@ import { fileURLToPath } from "url";
 import { URL } from "url";
 
 // ======= CONFIG =======
-const ORIGIN_BASE = process.env.ORIGIN_BASE || "http://46.152.153.249";
+const ORIGIN_BASE = process.env.ORIGIN_BASE || "http://46.152.116.98";
 const PORT = process.env.PORT || 10000;
 const ALLOW_INSECURE_TLS = String(process.env.ALLOW_INSECURE_TLS || "true") === "true";
 // ======================
