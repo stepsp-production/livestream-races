@@ -312,7 +312,7 @@
       // كشف تجمّد حقيقي (كل 2.5ث) ثم ندفعة مرة واحدة
       let lastT=0, stuck=0;
       const chk=()=>{ const t=video.currentTime||0; if(video.readyState>=2 && !video.paused){ if(Math.abs(t-lastT)<0.02){ if(++stuck>=2){ stuck=0; nudge(); } } else stuck=0; lastT=t; } };
-      setInterval(chk, 2500);
+      setInterval(chk, 3000);
     }
 
     /* DOM */
