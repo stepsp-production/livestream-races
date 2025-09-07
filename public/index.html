@@ -16,17 +16,16 @@
         href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%230b0b0f'/%3E%3Cpolygon points='26,20 26,44 46,32' fill='%23e53935'/%3E%3C/svg%3E" />
 
   <!-- تسخين/تهيئة شبكة مبكّرة -->
-  <link rel="preconnect" href="https://livestream-races.onrender.com">
-  <link rel="dns-prefetch" href="https://livestream-races.onrender.com">
+  <link rel="preconnect" href="/" crossorigin>
   <!-- Prefetch لقوائم HLS لتقليل وقت الظهور عند التشغيل -->
-  <link rel="preload" as="fetch" href="$1">
-  <link rel="preload" as="fetch" href="$1">
-  <link rel="preload" as="fetch" href="$1">
-  <link rel="preload" as="fetch" href="$1">
-  <link rel="preload" as="fetch" href="$1">
-  <link rel="preload" as="fetch" href="$1">
-  <link rel="preload" as="fetch" href="$1">
-  <link rel="preload" as="fetch" href="$1">
+  <link rel="preload" as="fetch" href="/hls/live/playlist.m3u8" crossorigin>
+  <link rel="preload" as="fetch" href="/hls/lastone/playlist.m3u8" crossorigin>
+  <link rel="preload" as="fetch" href="/hls/live2/playlist.m3u8" crossorigin>
+  <link rel="preload" as="fetch" href="/hls/live3/playlist.m3u8" crossorigin>
+  <link rel="preload" as="fetch" href="/hls/live4/playlist.m3u8" crossorigin>
+  <link rel="preload" as="fetch" href="/hls/live5/playlist.m3u8" crossorigin>
+  <link rel="preload" as="fetch" href="/hls/live6/playlist.m3u8" crossorigin>
+  <link rel="preload" as="fetch" href="/hls/live7/playlist.m3u8" crossorigin>
 
   <style>
     :root{
@@ -246,30 +245,16 @@
 
   <script>
     /* مصادر البث */
-    // عيّن هذا المتغيّر إلى نطاق الـ HLS الحقيقي إن لم تكن قوائم m3u8 على نفس الاستضافة
-    // مثال: window.HLS_BASE = 'https://cdn.yourdomain.com';
-    (function(){
-      const BASE = (window.HLS_BASE || '').replace(/\/$/, '');
-      const J = (p)=> BASE ? (BASE + p) : p; // ضمّ القاعدة مع المسار النسبي
-      window.sources = {
-        main:  J('/hls/live/playlist.m3u8'),
-        cam1:  J('/hls/lastone/playlist.m3u8'),
-        cam2:  J('/hls/live2/playlist.m3u8'),
-        cam3:  J('/hls/live3/playlist.m3u8'),
-        cam4:  J('/hls/live4/playlist.m3u8'),
-        cam5:  J('/hls/live5/playlist.m3u8'),
-        cam6:  J('/hls/live6/playlist.m3u8'),
-        cam7:  J('/hls/live7/playlist.m3u8'),
-      };
-
-      // إن كانت BASE تُشير لنطاق خارجي، أضف preconnect/dns-prefetch ديناميكيًا
-      try{
-        if(BASE && new URL(BASE, location.href).origin !== location.origin){
-          const l1=document.createElement('link'); l1.rel='preconnect'; l1.href=BASE; document.head.appendChild(l1);
-          const l2=document.createElement('link'); l2.rel='dns-prefetch'; l2.href=BASE; document.head.appendChild(l2);
-        }
-      }catch(e){}
-    })();
+    window.sources = {
+      main:  `/hls/live/playlist.m3u8`,
+      cam1:  `/hls/lastone/playlist.m3u8`,
+      cam2:  `/hls/live2/playlist.m3u8`,
+      cam3:  `/hls/live3/playlist.m3u8`,
+      cam4:  `/hls/live4/playlist.m3u8`,
+      cam5:  `/hls/live5/playlist.m3u8`,
+      cam6:  `/hls/live6/playlist.m3u8`,
+      cam7:  `/hls/live7/playlist.m3u8`,
+    };
   </script>
 
   <script>
@@ -444,20 +429,11 @@
     // التقاط إطار وتجميده لتفادي الشاشة السوداء عند التبديل/إعادة التهيئة
     function freezeFrom(video){
       try{
-        if(!video || video.readyState < 2) return; // لا تلتقط قبل توفر إطار صالح
         const w = root.clientWidth, h = root.clientHeight;
         freezeLayer.width = w; freezeLayer.height = h;
         const ctx = freezeLayer.getContext('2d');
         ctx.fillStyle = '#000'; ctx.fillRect(0,0,w,h);
         const rect = (video.getBoundingClientRect && video.parentElement) ? video.parentElement.getBoundingClientRect() : {width:w,height:h,left:0,top:0};
-        const scaleX = w / rect.width, scaleY = h / rect.height;
-        ctx.save();
-        ctx.scale(scaleX, scaleY);
-        ctx.drawImage(video, 0, 0, rect.width, rect.height);
-        ctx.restore();
-        freezeLayer.style.opacity = '1';
-      }catch(e){ /* ignore */ }
-    };
         const scaleX = w / rect.width, scaleY = h / rect.height;
         ctx.save();
         ctx.scale(scaleX, scaleY);
@@ -659,18 +635,7 @@
 
     /* ====== تحسينات الظهور السريع ====== */
 
-    function warmFetch(url){
-      try{
-        const u = new URL(url, location.href);
-        const same = (u.origin === location.origin);
-        fetch(u.toString(), {
-          // طابق وضع الطلب مع ما سيستخدمه hls.js لاحقًا
-          mode: same ? 'same-origin' : 'cors',
-          cache:'reload',
-          credentials: 'omit'
-        }).catch(()=>{});
-      }catch(e){}
-    }).catch(()=>{}); }catch(e){} }
+    function warmFetch(url){ try{ fetch(url, {mode:'no-cors', cache:'reload'}).catch(()=>{}); }catch(e){} }
     const warmList = [ sources.main, sources.cam1, sources.cam2, sources.cam3, sources.cam4, sources.cam5, sources.cam6, sources.cam7 ];
 
     function eagerInitMain(){
