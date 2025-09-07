@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Steps Production Co Player — HLS Optimized</title>
+  <title>Steps Production Co Player</title>
 
   <!-- Players -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -246,16 +246,30 @@
 
   <script>
     /* مصادر البث */
-    window.sources = {
-      main:  `/hls/live/playlist.m3u8`,
-      cam1:  `/hls/lastone/playlist.m3u8`,
-      cam2:  `/hls/live2/playlist.m3u8`,
-      cam3:  `/hls/live3/playlist.m3u8`,
-      cam4:  `/hls/live4/playlist.m3u8`,
-      cam5:  `/hls/live5/playlist.m3u8`,
-      cam6:  `/hls/live6/playlist.m3u8`,
-      cam7:  `/hls/live7/playlist.m3u8`,
-    };
+    // عيّن هذا المتغيّر إلى نطاق الـ HLS الحقيقي إن لم تكن قوائم m3u8 على نفس الاستضافة
+    // مثال: window.HLS_BASE = 'https://cdn.yourdomain.com';
+    (function(){
+      const BASE = (window.HLS_BASE || '').replace(/\/$/, '');
+      const J = (p)=> BASE ? (BASE + p) : p; // ضمّ القاعدة مع المسار النسبي
+      window.sources = {
+        main:  J('/hls/live/playlist.m3u8'),
+        cam1:  J('/hls/lastone/playlist.m3u8'),
+        cam2:  J('/hls/live2/playlist.m3u8'),
+        cam3:  J('/hls/live3/playlist.m3u8'),
+        cam4:  J('/hls/live4/playlist.m3u8'),
+        cam5:  J('/hls/live5/playlist.m3u8'),
+        cam6:  J('/hls/live6/playlist.m3u8'),
+        cam7:  J('/hls/live7/playlist.m3u8'),
+      };
+
+      // إن كانت BASE تُشير لنطاق خارجي، أضف preconnect/dns-prefetch ديناميكيًا
+      try{
+        if(BASE && new URL(BASE, location.href).origin !== location.origin){
+          const l1=document.createElement('link'); l1.rel='preconnect'; l1.href=BASE; document.head.appendChild(l1);
+          const l2=document.createElement('link'); l2.rel='dns-prefetch'; l2.href=BASE; document.head.appendChild(l2);
+        }
+      }catch(e){}
+    })();
   </script>
 
   <script>
