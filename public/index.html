@@ -385,9 +385,9 @@
 
       if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
         const loop = () => { try{ poll(); video.requestVideoFrameCallback(loop);}catch(e){} };
-        try{ video.requestVideoFrameCallback(loop);}catch(e){ setInterval(poll, 2500); }
+        try{ video.requestVideoFrameCallback(loop);}catch(e){ setInterval(poll, 2000); }
       } else {
-        setInterval(poll, 2500);
+        setInterval(poll, 2000);
       }
     }
 
@@ -472,7 +472,7 @@
             if (navigator.connection && navigator.connection.downlink) {
               const mbps = navigator.connection.downlink;
               // مثال تقريبي: لا تتجاوز ~1080p إذا الداونلينك < 6 Mbps
-              const cap = data.levels.findIndex(l=> (l.height||0) >= (mbps<3?480:(mbps<5?1080:2160)) );
+              const cap = data.levels.findIndex(l=> (l.height||0) >= (mbps<3?480:(mbps<4?1080:1920)) );
               if(cap>0) hls.autoLevelCapping = Math.max(0, cap-1);
             }
           });
