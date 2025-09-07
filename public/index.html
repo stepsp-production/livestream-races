@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Steps Production Co Player</title>
+  <title>Steps Production Co Player — HLS Optimized</title>
 
   <!-- Players -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -16,7 +16,6 @@
         href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%230b0b0f'/%3E%3Cpolygon points='26,20 26,44 46,32' fill='%23e53935'/%3E%3C/svg%3E" />
 
   <!-- تسخين/تهيئة شبكة مبكّرة -->
-  <!-- إن كانت المسارات على نفس الأصل، preconnect للأصل نفسه يظل مفيدًا -->
   <link rel="preconnect" href="/" crossorigin>
   <!-- Prefetch لقوائم HLS لتقليل وقت الظهور عند التشغيل -->
   <link rel="preload" as="fetch" href="/hls/live/playlist.m3u8" crossorigin>
@@ -41,6 +40,9 @@
 
     #playerContainer{position:relative;width:100vw;height:100vh}
     .videoFrame{position:absolute;top:0;right:0;width:100%;height:100%;background:#000;overflow:hidden}
+
+    /* طبقة تجميد لمنع الشاشة السوداء */
+    #freezeLayer{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity .18s}
 
     /* المعاينة الرئيسية */
     #mainPreview{
@@ -71,7 +73,7 @@
 
     #globalControls{
       bottom:70px;left:50%;transform:translateX(-50%);
-      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bd);
+      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bد);
       backdrop-filter:blur(8px);align-items:center;min-width:320px
     }
     #globalControls.hidden{display:none}
@@ -172,6 +174,8 @@
 </head>
 <body>
   <div id="playerContainer" aria-label="مشغّل متعدد الكاميرات">
+    <canvas id="freezeLayer"></canvas>
+
     <div id="activeCam" class="videoFrame" aria-label="الكاميرا النشطة"></div>
     <div id="mainPreview" class="videoFrame" title="انقر للتكبير/التصغير" aria-label="المعاينة الرئيسية المصغّرة"></div>
     <div class="hint">انقر على المعاينة للتكبير • أو اضغط F</div>
@@ -255,22 +259,26 @@
 
   <script>
     /* ========= HLS: إعدادات مُسرَّعة وأكثر ثباتًا ========= */
+    // تكييف أولي حسب شبكة المستخدم (إن توفّرت)
+    const downlinkMbps = (navigator.connection && navigator.connection.downlink) ? navigator.connection.downlink : 2.5;
+
     const HLS_CONFIG = {
       lowLatencyMode: false,
-      startPosition: -1,                  // ابدأ عند الحافة الحية فورًا
+      startPosition: -1,
       liveSyncDuration: 4,
       liveMaxLatencyDuration: 18,
-      maxLiveSyncPlaybackRate: 1.1,
+      maxLiveSyncPlaybackRate: 1.15,
       capLevelToPlayerSize: true,
       maxBufferLength: 18,
       backBufferLength: 30,
       maxFragLookUpTolerance: 0.25,
       maxBufferHole: 0.5,
       enableWorker: true,
-      // تقدير ابتدائي للباندويدث لتفادي القفز مباشرة لأعلى جودة (أسرع ظهور)
-      abrEwmaDefaultEstimate: 800_000,    // ~0.8Mbps كبداية
+      progressive: true,
+      // تقدير ابتدائي للباندويدث: أقل على الشبكات الضعيفة لتسريع الظهور
+      abrEwmaDefaultEstimate: Math.max(500_000, Math.min(2_500_000, downlinkMbps * 500_000)),
       abrMaxWithRealBitrate: true,
-      // مهلات أقصر + إعادة محاولات مع jitter
+      // مهلات + إعادة محاولات مع jitter
       fragLoadingMaxRetry: 6,
       manifestLoadingMaxRetry: 6,
       levelLoadingMaxRetry: 5,
@@ -284,12 +292,29 @@
       xhrSetup: (xhr) => { try{ xhr.withCredentials=false; }catch(e){} }
     };
 
-    // jitter بسيط لتفادي تراكم المحاولات من عدة مثيلات
+    // jitter بسيط
     const withJitter = (base) => base + Math.floor(Math.random()*180);
 
-    function codecPlayable(c){ try{ const v=document.createElement('video'); return !!v.canPlayType(`video/mp4; codecs="${c}"`);}catch(e){return false;} }
-    const SUPPORTS={ avc:codecPlayable('avc1.42E01E')||codecPlayable('avc1.4d401f')||codecPlayable('avc1.640028'),
-                     hevc:codecPlayable('hvc1.1.6.L93.B0')||codecPlayable('hev1.1.6.L93.B0') };
+    // فحص دعم الترميزات عبر MediaCapabilities (أدق من canPlayType لو توفر)
+    async function isCodecSupported(codec) {
+      if (navigator.mediaCapabilities && navigator.mediaCapabilities.decodingInfo) {
+        try {
+          const info = await navigator.mediaCapabilities.decodingInfo({
+            type: 'file',
+            video: { contentType: `video/mp4; codecs="${codec}"`, width: 1920, height: 1080, bitrate: 3_000_000, framerate: 30 }
+          });
+          return !!info.supported;
+        } catch (e) {}
+      }
+      const v = document.createElement('video');
+      return !!v.canPlayType(`video/mp4; codecs="${codec}"`);
+    }
+
+    const SUPPORTS = { avc: null, hevc: null };
+    (async ()=>{
+      SUPPORTS.avc  = await isCodecSupported('avc1.640028') || await isCodecSupported('avc1.4d401f') || await isCodecSupported('avc1.42E01E');
+      SUPPORTS.hevc = await isCodecSupported('hvc1.1.6.L93.B0') || await isCodecSupported('hev1.1.6.L93.B0');
+    })();
 
     function pickPlayableLevel(levels){
       let i=levels.findIndex(l=>/avc1/i.test(l?.codecs||l?.codecsVideo||'')); if(i>=0 && SUPPORTS.avc) return i;
@@ -302,20 +327,14 @@
 
     function attachRecovery(hls, video, role){
       hls.on(Hls.Events.MANIFEST_PARSED,(_,data)=>{ try{
-        // اختر مستوى قابل للتشغيل فورًا
-        const idx=pickPlayableLevel(data?.levels||[]); 
-        if(idx>=0){ 
-          hls.startLevel = idx;
-          hls.currentLevel = idx; 
-          hls.nextLevel = idx; 
-        }
+        const idx=pickPlayableLevel(data?.levels||[]);
+        if(idx>=0){ hls.startLevel = idx; hls.currentLevel = idx; hls.nextLevel = idx; }
+        // كبّر/صغّر السقف تلقائيًا حسب حجم اللاعب
+        hls.capLevelToPlayerSize = true;
       }catch(e){} });
 
       hls.on(Hls.Events.LEVEL_UPDATED,(_,data)=>{
-        // احرص على البقاء قريبًا من الحافة الحية
-        if(data?.details?.live) {
-          hls.latencyController?.computeLivePosition?.();
-        }
+        if(data?.details?.live) { hls.latencyController?.computeLivePosition?.(); }
       });
 
       hls.on(Hls.Events.FRAG_CHANGED,(_,data)=>{
@@ -326,22 +345,18 @@
 
       hls.on(Hls.Events.ERROR,(_,err)=>{
         const d=err||{};
-        // فشل شبكي: أعد التحميل بسرعة مع jitter
         if(d.type===Hls.ErrorTypes.NETWORK_ERROR){
           try{ setTimeout(()=>hls.startLoad(0), withJitter(120)); }catch(e){}
           return;
         }
-        // أخطاء ترميز/ذاكرة وسائط: استشفاء
         if(d.details && /(DECODE|BUFFER|FRAG_PARSING|MANIFEST_INCOMPATIBLE_CODECS)/i.test(String(d.details))){
           try{ hls.swapAudioCodec?.(); hls.recoverMediaError?.(); }catch(e){}
           return;
         }
-        if(d.fatal){
-          try{ hls.recoverMediaError?.(); }catch(e){}
-        }
+        if(d.fatal){ try{ hls.recoverMediaError?.(); }catch(e){} }
       });
 
-      // مضاد التوقفات: نَخز بسيط عند waiting/stalled
+      // Nudge ذكي عبر rVFC إن وُجد
       const nudge=()=>{
         try{
           const r=video.seekable;
@@ -353,21 +368,27 @@
           hls.startLoad(0); video.play().catch(()=>{});
         }catch(e){}
       };
-      video.addEventListener('waiting', nudge);
-      video.addEventListener('stalled', nudge);
 
-      // كشف تجمّد حقيقي
+      const onWaiting = ()=> nudge();
+      video.addEventListener('waiting', onWaiting);
+      video.addEventListener('stalled', onWaiting);
+
       let lastT=0, stuck=0;
-      const chk=()=>{ 
-        const t=video.currentTime||0; 
-        if(video.readyState>=2 && !video.paused){ 
-          if(Math.abs(t-lastT)<0.02){ 
-            if(++stuck>=2){ stuck=0; nudge(); } 
-          } else stuck=0; 
-          lastT=t; 
-        } 
+      const poll = () => {
+        const t=video.currentTime||0;
+        if(video.readyState>=2 && !video.paused){
+          if(Math.abs(t-lastT)<0.02){ if(++stuck>=2){ stuck=0; nudge(); } }
+          else stuck=0;
+          lastT=t;
+        }
       };
-      setInterval(chk, 3000);
+
+      if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
+        const loop = () => { try{ poll(); video.requestVideoFrameCallback(loop);}catch(e){} };
+        try{ video.requestVideoFrameCallback(loop);}catch(e){ setInterval(poll, 3000); }
+      } else {
+        setInterval(poll, 3000);
+      }
     }
 
     /* DOM */
@@ -388,6 +409,7 @@
     const timeLabel=document.getElementById('timeLabel');
     const preloadBin=document.getElementById('preloadBin');
     const utilityControls=document.getElementById('utilityControls');
+    const freezeLayer=document.getElementById('freezeLayer');
 
     let mainPlayer, activePlayer, currentCam="cam2";
     let splitMode=0, isMainFull=false, fillMode=false, started=false, inited=false;
@@ -404,6 +426,24 @@
       return mainCt;
     }
 
+    // التقاط إطار وتجميده لتفادي الشاشة السوداء عند التبديل/إعادة التهيئة
+    function freezeFrom(video){
+      try{
+        const w = root.clientWidth, h = root.clientHeight;
+        freezeLayer.width = w; freezeLayer.height = h;
+        const ctx = freezeLayer.getContext('2d');
+        ctx.fillStyle = '#000'; ctx.fillRect(0,0,w,h);
+        const rect = (video.getBoundingClientRect && video.parentElement) ? video.parentElement.getBoundingClientRect() : {width:w,height:h,left:0,top:0};
+        const scaleX = w / rect.width, scaleY = h / rect.height;
+        ctx.save();
+        ctx.scale(scaleX, scaleY);
+        ctx.drawImage(video, 0, 0, rect.width, rect.height);
+        ctx.restore();
+        freezeLayer.style.opacity = '1';
+      }catch(e){ /* ignore */ }
+    }
+    function unfreeze(){ freezeLayer.style.opacity='0'; }
+
     function createVideo(container, url, role){
       const wrapper=document.createElement('div'); wrapper.style.position='absolute'; wrapper.style.inset='0'; wrapper.className='swap-enter';
       container.appendChild(wrapper); requestAnimationFrame(()=>wrapper.classList.add('swap-enter-active'));
@@ -419,22 +459,26 @@
 
       if(/\.m3u8(\?|$)/i.test(url)){
         if(video.canPlayType('application/vnd.apple.mpegURL')){
-          // أجهزة iOS/Safari: HLS أصيل
           video.src=url;
         }else if(useHlsJs()){
           const cfg = {...HLS_CONFIG};
-          const hls=new Hls(cfg); 
-          video.__hls=hls; 
-          hls.attachMedia(video); 
-          // عيّن startLevel مبكرًا عند توفره بعد manifest
-          hls.on(Hls.Events.MANIFEST_PARSED,(_,data)=>{ 
-            const idx=pickPlayableLevel(data?.levels||[]); 
+          const hls=new Hls(cfg);
+          video.__hls=hls;
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED,(_,data)=>{
+            const idx=pickPlayableLevel(data?.levels||[]);
             if(idx>=0){ hls.startLevel=idx; hls.currentLevel=idx; hls.nextLevel=idx; }
+            // سقف تلقائي حسب شبكة المستخدم (اختياري)
+            if (navigator.connection && navigator.connection.downlink) {
+              const mbps = navigator.connection.downlink;
+              // مثال تقريبي: لا تتجاوز ~1080p إذا الداونلينك < 6 Mbps
+              const cap = data.levels.findIndex(l=> (l.height||0) >= (mbps<3?480:(mbps<6?1080:2160)) );
+              if(cap>0) hls.autoLevelCapping = Math.max(0, cap-1);
+            }
           });
           hls.loadSource(url);
           attachRecovery(hls, video, role);
         }else{
-          // fallback
           video.src=url;
         }
       }else if(/\.mpd(\?|$)/i.test(url) && window.dashjs){
@@ -444,7 +488,11 @@
       }
 
       video.addEventListener('loadedmetadata', ()=>{ video.play().catch(()=>{}); }, {once:true});
-      video.addEventListener('canplay', ()=>{ [...container.children].slice(0,-1).forEach(ch=>{ try{ const v=ch.querySelector?.('video'); v?.pause?.(); v?.__hls?.destroy?.(); ch.remove(); }catch(e){} }); }, {once:true});
+      video.addEventListener('canplay', ()=>{
+        // عند جاهزية الفيديو الجديد: أزل السابق وانهِ التجميد
+        [...container.children].slice(0,-1).forEach(ch=>{ try{ const v=ch.querySelector?.('video'); v?.pause?.(); v?.__hls?.destroy?.(); ch.remove(); }catch(e){} });
+        unfreeze();
+      }, {once:true});
       return video;
     }
 
@@ -491,17 +539,17 @@
     function initPlayersOnce(){ if(inited) return; inited=true; initPlayers(); }
 
     async function playEntity(ent, muted=true){ try{ ent.muted=!!muted; await ent.play(); }catch(e){} }
-    async function startPlayback(){ 
-      if(started) return; 
-      started=true; 
-      gatePlay.classList.add('hidden'); 
-      globalControls.classList.remove('hidden'); 
-      await playEntity(mainPlayer,true); 
-      await playEntity(activePlayer,true); 
-      setTimeout(syncCams,220); 
-      positionUtilityDock(); 
-      startTimeTicker(); 
-      reflectSoundState(); 
+    async function startPlayback(){
+      if(started) return;
+      started=true;
+      gatePlay.classList.add('hidden');
+      globalControls.classList.remove('hidden');
+      await playEntity(mainPlayer,true);
+      await playEntity(activePlayer,true);
+      setTimeout(syncCams,220);
+      positionUtilityDock();
+      startTimeTicker();
+      reflectSoundState();
     }
 
     // زمن/مدة
@@ -546,11 +594,20 @@
     }
     async function jumpBy(d){ const t=await getMainTime(); const dmax=await getMainDuration(); let nt=(t||0)+d; if(dmax&&isFinite(dmax)) nt=Math.min(Math.max(0,nt),dmax); await seekMainTo(nt); await seekActiveTo(pdtAlignedTarget(nt)); }
 
-    /* تبديل الكاميرات — اللودر على الزر فقط */
+    /* تبديل الكاميرات — Freeze + مزامنة قبل الإظهار */
     function switchCam(cam, btn){
       currentCam=cam; if(btn){ btn.classList.add('btn-loading'); setTimeout(()=>btn.classList.remove('btn-loading'),1200); }
+
+      // جمّد آخر إطار من الكاميرا الحالية لتفادي السوداء
+      const currentVid = camContainer.querySelector('video') || mainContainer.querySelector('video');
+      if(currentVid) freezeFrom(currentVid);
+
       const newcomer=createVideo(camContainer, sources[cam], 'active');
-      const promote=async()=>{ activePlayer=newcomer; await playEntity(activePlayer,true); const mt=await getMainTime(); await seekActiveTo(pdtAlignedTarget(mt)); [...camContainer.children].slice(0,-1).forEach(ch=>destroyVideoNode(ch)); };
+      const promote=async()=>{
+        activePlayer=newcomer; await playEntity(activePlayer,true);
+        const mt=await getMainTime(); await seekActiveTo(pdtAlignedTarget(mt));
+        // إزالة القديم ستتم عند canplay (داخل createVideo)
+      };
       if(newcomer instanceof HTMLVideoElement){ newcomer.addEventListener('canplay',promote,{once:true}); newcomer.play().catch(()=>{}); } else { promote(); }
     }
 
@@ -578,48 +635,26 @@
 
     /* ====== تحسينات الظهور السريع ====== */
 
-    // 1) تسخين الشبكة لقوائم HLS مبكرًا (يقلل وقت أول ظهور)
-    function warmFetch(url){
-      try{ fetch(url, {mode:'no-cors', cache:'reload'}).catch(()=>{}); }catch(e){}
-    }
-    const warmList = [
-      sources.main, sources.cam1, sources.cam2, sources.cam3, sources.cam4, sources.cam5, sources.cam6, sources.cam7
-    ];
+    function warmFetch(url){ try{ fetch(url, {mode:'no-cors', cache:'reload'}).catch(()=>{}); }catch(e){} }
+    const warmList = [ sources.main, sources.cam1, sources.cam2, sources.cam3, sources.cam4, sources.cam5, sources.cam6, sources.cam7 ];
 
-    // 2) تهيئة مبكّرة للـ HLS للخط الرئيسي قبل النقر (buffer-ready)
     function eagerInitMain(){
       if(mainPlayer) return;
       mainPlayer = createVideo(mainContainer, sources.main, 'main');
-      // لن نشغّل الصوت أو نضغط Play الآن، فقط نجعل الـ HLS يحمّل مبكرًا
       if(mainPlayer.__hls){ try{ mainPlayer.__hls.startLoad(0); }catch(e){} }
-      // دَفعة مقطوعة بسيطة بعد ثانية لإجبار المتصفح على جلب أول المقاطع
-      setTimeout(()=>{ try{ mainPlayer.load?.(); }catch(e){} }, 1000);
+      setTimeout(()=>{ try{ mainPlayer.load?.(); }catch(e){} }, 600);
     }
 
-    // 3) عند الجاهزية: فعّل الكاميرا النشطة أيضًا
     function eagerInitActive(){
       if(activePlayer) return;
       activePlayer = createVideo(camContainer, sources[currentCam], 'active');
       if(activePlayer.__hls){ try{ activePlayer.__hls.startLoad(0); }catch(e){} }
     }
 
-    /* Init */
-    function initPlayersOnce(){ 
-      if(inited) return; 
-      inited=true; 
-      eagerInitMain();     // تهيئة مبكرة للخط الرئيسي
-      eagerInitActive();   // و للكاميرا النشطة
-      // تسخين قوائم التشغيل جميعها (خفيف لكنه مفيد مع CDN)
-      setTimeout(()=>warmList.forEach(warmFetch), 120);
-    }
+    function initPlayersOnce(){ if(inited) return; inited=true; eagerInitMain(); eagerInitActive(); setTimeout(()=>warmList.forEach(warmFetch), 120); }
 
-    // YouTube API ready إشارة لبدء التهيئة أيضًا (كما كان)
     window.onYouTubeIframeAPIReady=()=>{ initPlayersOnce(); };
-
-    window.addEventListener('DOMContentLoaded',  ()=>{ 
-      initPlayersOnce(); 
-      positionUtilityDock(); 
-    });
+    window.addEventListener('DOMContentLoaded',  ()=>{ initPlayersOnce(); positionUtilityDock(); });
 
     // واجهة خفيفة: إخفاء/إظهار تفاعلي
     (function autoUi(){ let t=null; const wake=()=>{ document.body.classList.add('ui-awake'); clearTimeout(t); t=setTimeout(()=>document.body.classList.remove('ui-awake'), 1800); }; ['mousemove','touchstart','touchmove','keydown','click'].forEach(ev=>window.addEventListener(ev,wake,{passive:true})); wake();})();
