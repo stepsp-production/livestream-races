@@ -18,6 +18,7 @@
   <!-- تسخين/تهيئة شبكة مبكّرة -->
   <link rel="preconnect" href="/" crossorigin>
   <!-- Prefetch لقوائم HLS لتقليل وقت الظهور عند التشغيل -->
+  <link rel="preload" as="fetch" href="/hls/live/playlist.m3u8" crossorigin>
   <link rel="preload" as="fetch" href="/hls/lastone/playlist.m3u8" crossorigin>
   <link rel="preload" as="fetch" href="/hls/live2/playlist.m3u8" crossorigin>
   <link rel="preload" as="fetch" href="/hls/live3/playlist.m3u8" crossorigin>
@@ -384,9 +385,9 @@
 
       if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
         const loop = () => { try{ poll(); video.requestVideoFrameCallback(loop);}catch(e){} };
-        try{ video.requestVideoFrameCallback(loop);}catch(e){ setInterval(poll, 3000); }
+        try{ video.requestVideoFrameCallback(loop);}catch(e){ setInterval(poll, 2500); }
       } else {
-        setInterval(poll, 3000);
+        setInterval(poll, 2500);
       }
     }
 
@@ -410,7 +411,7 @@
     const utilityControls=document.getElementById('utilityControls');
     const freezeLayer=document.getElementById('freezeLayer');
 
-    let mainPlayer, activePlayer, currentCam="cam2";
+    let mainPlayer, activePlayer, currentCam="cam1";
     let splitMode=0, isMainFull=false, fillMode=false, started=false, inited=false;
 
     function clampToSeekable(video,t){
@@ -471,7 +472,7 @@
             if (navigator.connection && navigator.connection.downlink) {
               const mbps = navigator.connection.downlink;
               // مثال تقريبي: لا تتجاوز ~1080p إذا الداونلينك < 6 Mbps
-              const cap = data.levels.findIndex(l=> (l.height||0) >= (mbps<3?480:(mbps<6?1080:2160)) );
+              const cap = data.levels.findIndex(l=> (l.height||0) >= (mbps<3?480:(mbps<5?1080:2160)) );
               if(cap>0) hls.autoLevelCapping = Math.max(0, cap-1);
             }
           });
