@@ -11,9 +11,6 @@
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="https://player.vimeo.com/api/player.js"></script>
 
-  <!-- Mux Data (اختياري) -->
-  <script src="https://cdn.jsdelivr.net/npm/mux-embed@4"></script>
-  <script>const MUX_ENV_KEY = "pbeeo1h4b1ep6bg7l5990re1f";</script>
 
   <!-- أيقونة -->
   <link rel="icon"
@@ -641,16 +638,6 @@
       if(v) await SYNC_MGR.seekVideoTo(v, SYNC_MGR.computeTargetFor(camId, mainTime));
     }
   };
-
-  /* Mux Data */
-  function monitorWithMuxData(video, label, hlsInstance=null){
-    if(!window.mux || !MUX_ENV_KEY) return;
-    if(video.__muxMonitorId && mux.destroyMonitor){ try{ mux.destroyMonitor(video.__muxMonitorId); }catch(e){} }
-    const metadata={ environment_key:MUX_ENV_KEY, player_name:"Steps MultiCam Player", player_version:"1.0.0", video_id:label, video_title:`Stream ${label}`, custom_1:"multicam-sync" };
-    const options = hlsInstance ? { hlsjs:hlsInstance } : undefined;
-    try{ video.__muxMonitorId = mux.monitor(video, { debug:false, data:metadata }, options); }catch(e){}
-  }
-  function unmonitorMux(video){ if(video?.__muxMonitorId && window.mux?.destroyMonitor){ try{ mux.destroyMonitor(video.__muxMonitorId); }catch(e){} } }
   </script>
 </body>
 </html>
