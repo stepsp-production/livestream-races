@@ -222,8 +222,8 @@
           hls.autoLevelCapping = Math.max(0, capIndex - 1);
         }
         // بافر أكبر للرئيسي، أصغر للمرايا
-        if (isMirror) { hls.config.maxBufferLength = performanceLightMode ? 8 : 14; hls.config.backBufferLength = 10; }
-        else { hls.config.maxBufferLength = performanceLightMode ? 20 : 28; hls.config.backBufferLength = performanceLightMode ? 30 : 50; }
+        if (isMirror) { hls.config.maxBufferLength = performanceLightMode ? 8 : 14; hls.config.backBufferLength = 12; }
+        else { hls.config.maxBufferLength = performanceLightMode ? 24 : 28; hls.config.backBufferLength = performanceLightMode ? 36 : 50; }
         hls.capLevelToPlayerSize = true;
       }catch(e){} });
 
@@ -623,6 +623,74 @@
       if(v) await SYNC_MGR.seekVideoTo(v, SYNC_MGR.computeTargetFor(camId, mainTime));
     }
   };
-  </script>
+</script>
+    <!-- ===== DEBUG OVERLAY (تشخيص سريع) ===== -->
+<script>
+(function(){
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:99999;background:#0b0b0fcc;color:#fff;padding:8px 10px;border:1px solid #ffffff26;border-radius:10px;font:12px/1.4 system-ui;min-width:240px';
+  box.innerHTML = '<b>Diag</b> <span id="dg-net"></span><br>'
+                + 'Main t=<span id="dg-mt">0</span>s • buf=<span id="dg-mbuf">0</span>s<br>'
+                + 'Cam  t=<span id="dg-at">0</span>s • buf=<span id="dg-abuf">0</span>s<br>'
+                + 'Δ(main-cam)=<span id="dg-dt">0</span>s<br>'
+                + 'DroppedFrames=<span id="dg-drop">0</span>';
+  document.body.appendChild(box);
+  const dg = {
+    net: box.querySelector('#dg-net'),
+    mt:  box.querySelector('#dg-mt'),
+    mb:  box.querySelector('#dg-mbuf'),
+    at:  box.querySelector('#dg-at'),
+    ab:  box.querySelector('#dg-abuf'),
+    dt:  box.querySelector('#dg-dt'),
+    dr:  box.querySelector('#dg-drop'),
+  };
+
+  function bufLen(v){
+    try{
+      const r=v.buffered; if(!r||!r.length) return 0;
+      const t=v.currentTime||0;
+      for(let i=0;i<r.length;i++){ const s=r.start(i), e=r.end(i); if(t>=s && t<=e) return Math.max(0, e - t); }
+      return 0;
+    }catch(e){return 0;}
+  }
+
+  // قياس الشبكة التقريبي
+  function netStr(){
+    const c = navigator.connection;
+    if(!c) return '';
+    return `(${(c.downlink||0).toFixed(1)}Mbps ${c.effectiveType||''})`;
+  }
+
+  setInterval(async ()=>{
+    try{
+      dg.net.textContent = netStr();
+
+      // main
+      const mt = await getMainTime();
+      const mb = mainPlayer ? bufLen(mainPlayer) : 0;
+
+      // active
+      const at = (activePlayer?.currentTime)||0;
+      const ab = activePlayer ? bufLen(activePlayer) : 0;
+
+      dg.mt.textContent = (mt||0).toFixed(2);
+      dg.mb.textContent = mb.toFixed(2);
+      dg.at.textContent = (at||0).toFixed(2);
+      dg.ab.textContent = ab.toFixed(2);
+      dg.dt.textContent = ((mt||0)-(at||0)).toFixed(2);
+
+      // dropped frames (لو مدعوم)
+      let drop = 0;
+      try {
+        const vs = (mainPlayer?.getVideoPlaybackQuality && mainPlayer.getVideoPlaybackQuality())
+                || (mainPlayer?.webkitDroppedFrameCount!=null ? {droppedVideoFrames:mainPlayer.webkitDroppedFrameCount} : null);
+        if(vs) drop = vs.droppedVideoFrames|0;
+      } catch(e){}
+      dg.dr.textContent = drop;
+    }catch(e){}
+  }, 500);
+})();
+</script>
+
 </body>
 </html>
