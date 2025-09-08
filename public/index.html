@@ -232,7 +232,7 @@
     const utilityControls=document.getElementById('utilityControls');
     const freezeLayer=document.getElementById('freezeLayer');
 
-    let mainPlayer, activePlayer, currentCam="cam1";
+    let mainPlayer, activePlayer, currentCam="cam2";
     let splitMode=0, isMainFull=false, fillMode=false, started=false, inited=false;
 
     function clampToSeekable(video,t){ const r=video.seekable; if(!r||!r.length) return t; const start=r.start(r.length-1), end=r.end(r.length-1); return Math.min(Math.max(t, start+0.05), end-0.05); }
