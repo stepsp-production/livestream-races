@@ -13,163 +13,65 @@
 
   <!-- Mux Data (اختياري للتحليلات) -->
   <script src="https://cdn.jsdelivr.net/npm/mux-embed@4"></script>
-  <script>const MUX_ENV_KEY = "MUX_ENV_KEY_HERE"; /* ضع مفتاح البيئة من صفحة Mux → Data*/</script>
+  <script>const MUX_ENV_KEY = "pbeeo1h4b1ep6bg7l5990re1f";</script>
 
-  <!-- فافيكون -->
+  <!-- أيقونة -->
   <link rel="icon"
         href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%230b0b0f'/%3E%3Cpolygon points='26,20 26,44 46,32' fill='%23e53935'/%3E%3C/svg%3E" />
 
-  <!-- تحسين شبكة -->
+  <!-- تهيئة شبكة -->
   <link rel="preconnect" href="https://stream.mux.com">
-  <!-- Preload للـ main فقط -->
+  <!-- Preload للـ main -->
   <link rel="preload" as="fetch" href="https://stream.mux.com/jIy7RfNkNJqkZ1008eyc01WH9i4Nh37Q001xqZEdA50000LI.m3u8" crossorigin>
 
   <style>
-    :root{
-      --btn-bg:#e53935; --btn-bg-h:#d32f2f; --btn-bg-a:#b71c1c; --btn-txt:#fff;
-      --btn-ring:rgba(211,47,47,.28);
-      --panel-bg:#0b0b0fbb; --panel-bd:#ffffff26;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;background:#000;overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    :root{--btn-bg:#e53935;--btn-bg-h:#d32f2f;--btn-bg-a:#b71c1c;--btn-txt:#fff;--btn-ring:rgba(211,47,47,.28);--panel-bg:#0b0b0fbb;--panel-bd:#ffffff26}
+    *{box-sizing:border-box} html,body{height:100%} body{margin:0;background:#000;overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
     #playerContainer{position:relative;width:100vw;height:100vh}
     .videoFrame{position:absolute;top:0;right:0;width:100%;height:100%;background:#000;overflow:hidden}
-
-    /* طبقة تجميد */
     #freezeLayer{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity .18s}
-
-    /* المعاينة الرئيسية */
-    #mainPreview{
-      position:absolute;top:16px;right:20px;width:22%;height:24%;
-      z-index:6;border:1px solid #fff2;border-radius:18px;cursor:pointer;
-      transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s,left .18s
-    }
+    #mainPreview{position:absolute;top:16px;right:20px;width:22%;height:24%;z-index:6;border:1px solid #fff2;border-radius:18px;cursor:pointer;transition:transform .18s,box-shadow .18s,width .18s,height .18s,top .18s,right .18s,left .18s}
     #mainPreview:hover{box-shadow:0 10px 30px #0008}
     #mainPreview video{display:block;width:100%;height:100%;object-fit:contain}
-
-    /* split/fill */
     .split #mainPreview{top:0;right:0;width:50%;height:100%;border:0;border-radius:0;cursor:default}
     .split #activeCam{top:0;left:0;right:auto;width:50%;height:100%}
     .split.fill #mainPreview video,.split.fill #activeCam video{object-fit:cover}
     .main-full #mainPreview{top:0;right:0;width:100%;height:100%;z-index:7;border:0;border-radius:0;cursor:zoom-out}
     .main-full #activeCam{display:none}
-
     .hint{position:absolute;top:20px;right:20px;z-index:8;background:#000a;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;border:1px solid #fff2}
     .split .hint,.main-full .hint{display:none}
-
-    /* اللوحات */
     #utilityControls,#camControls,#globalControls{position:absolute;z-index:10;display:flex;gap:8px;flex-wrap:wrap;transition:top .18s,left .18s,right .18s}
     #utilityControls{background:transparent;padding:0;border:0;border-radius:12px}
-    #utilityControls.vertical{flex-direction:column}
-    #utilityControls.horizontal{flex-direction:row}
+    #utilityControls.vertical{flex-direction:column} #utilityControls.horizontal{flex-direction:row}
     #utilityControls .group{display:flex;gap:6px;align-items:center}
     .divider{width:1px;height:22px;background:var(--panel-bd);border-radius:2px;margin:0 4px}
-
-    #globalControls{
-      bottom:70px;left:50%;transform:translateX(-50%);
-      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bد);
-      backdrop-filter:blur(8px);align-items:center;min-width:320px
-    }
+    #globalControls{bottom:70px;left:50%;transform:translateX(-50%);background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bد);backdrop-filter:blur(8px);align-items:center;min-width:320px}
     #globalControls.hidden{display:none}
     #scrub{-webkit-appearance:none;appearance:none;width:320px;height:6px;border-radius:999px;background:#ffffff30;outline:none;margin:0 8px}
     #scrub::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #0006;cursor:pointer}
     #timeLabel{color:#fff;font-size:12px;min-width:108px;text-align:center}
-
-    /* أزرار الكاميرات */
-    #camControls{
-      bottom:14px;left:50%;transform:translateX(-50%);
-      background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bد);backdrop-filter:blur(8px)
-    }
-
-    /* الأزرار */
-    button{
-      -webkit-tap-highlight-color:transparent;appearance:none;border:0;outline:0;cursor:pointer;
-      background:var(--btn-bg);color:var(--btn-txt);padding:11px 12px;font-size:12px;line-height:1;font-weight:800;
-      border-radius:12px;letter-spacing:.2px;min-width:auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;
-      box-shadow:0 8px 18px #000a,0 0 0 0 var(--btn-ring);transition:transform .12s,box-shadow .12s,background .12s,opacity .12s;opacity:.35
-    }
-    body.ui-awake button{opacity:1}
-    button:hover{background:var(--btn-bg-h);box-shadow:0 12px 26px #000c,0 0 0 6px var(--btn-ring)}
-    button:active{background:var(--btn-bg-a);transform:translateY(1px)}
-
-    /* اللودر على زر الكاميرا فقط */
-    .btn-loading{opacity:.9;pointer-events:none;position:relative}
-    .btn-loading::after{content:"";position:absolute;inset:auto 6px 6px auto;width:14px;height:14px;border-radius:50%;
-      border:2px solid #fff8;border-top-color:transparent;animation:spin .6s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-
-    .icon{width:16px;height:16px}
-    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-
-    /* زر الصوت */
+    #camControls{bottom:14px;left:50%;transform:translateX(-50%);background:var(--panel-bg);padding:10px;border-radius:14px;border:1px solid var(--panel-bد);backdrop-filter:blur(8px)}
+    button{-webkit-tap-highlight-color:transparent;appearance:none;border:0;outline:0;cursor:pointer;background:var(--btn-bg);color:var(--btn-txt);padding:11px 12px;font-size:12px;line-height:1;font-weight:800;border-radius:12px;letter-spacing:.2px;min-width:auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 18px #000a,0 0 0 0 var(--btn-ring);transition:transform .12s,box-shadow .12s,background .12s,opacity .12s;opacity:.35}
+    body.ui-awake button{opacity:1} button:hover{background:var(--btn-bg-h);box-shadow:0 12px 26px #000c,0 0 0 6px var(--btn-ring)} button:active{background:var(--btn-bg-a);transform:translateY(1px)}
+    .btn-loading{opacity:.9;pointer-events:none;position:relative}.btn-loading::after{content:"";position:absolute;inset:auto 6px 6px auto;width:14px;height:14px;border-radius:50%;border:2px solid #fff8;border-top-color:transparent;animation:spin .6s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}} .icon{width:16px;height:16px} .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
     #btnSound{min-width:auto;padding:6px 8px}
-    #btnSound[data-muted="true"]  .icon-sound-on{display:none}
-    #btnSound[data-muted="true"]  .icon-sound-off{display:inline}
-    #btnSound[data-muted="false"] .icon-sound-on{display:inline}
-    #btnSound[data-muted="false"] .icon-sound-off{display:none}
-
-    /* بوابة البدء */
+    #btnSound[data-muted="true"] .icon-sound-on{display:none} #btnSound[data-muted="true"] .icon-sound-off{display:inline}
+    #btnSound[data-muted="false"] .icon-sound-on{display:inline} #btnSound[data-muted="false"] .icon-sound-off{display:none}
     #gatePlay{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,rgba(0,0,0,.55),rgba(0,0,0,.2));backdrop-filter:blur(2px)}
     #gatePlay.hidden{display:none}
     .gate-card{background:var(--panel-bg);border:1px solid var(--panel-bد);border-radius:18px;padding:18px 20px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.45)}
     .gate-card .icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--panel-bد);color:#fff;background:#111a;font-size:18px}
     #startBtn{min-width:160px}
-
-    .swap-enter{opacity:0;transition:opacity .18s ease}
-    .swap-enter.swap-enter-active{opacity:1}
-
-    /* هاتف أفقي */
-    @media (orientation: landscape) and (max-width: 900px){
-      #mainPreview{width:32%;height:30%;right:18px;top:14px;border-radius:18px}
-      .hint{display:none}
-      #camControls{top:50%;left:8px;bottom:auto;transform:translateY(-50%);flex-direction:column;align-items:stretch;padding:8px;gap:6px}
-      #camControls button{min-width:86px;font-size:10px;padding:8px 10px;border-radius:10px}
-       #globalControls{
-    position: fixed;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    min-width: 260px}
-      #scrub{width:220px}
-    }
-
-    /* هاتف عمودي */
-    @media (orientation: portrait){
-      #mainPreview{top:12px;right:14px;width:58vw;height:36vh;border-radius:18px}
-       #globalControls{
-    position: fixed;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(94vw, 560px);
-    padding: 8px 10px;
-    z-index: 9999;
-  }
-      #scrub{width:clamp(140px,56vw,380px)}
-
-      #camControls{
-        top:60px;left:6px;right:auto;bottom:auto;transform:none;display:flex;flex-direction:column;align-items:stretch;gap:6px;
-        padding:8px 6px;max-height:58vh;overflow:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,#0b0b0fb3,#0b0b0f99);
-        border:1px solid var(--panel-bد);border-radius:14px;width:46px;transition:width .18s,box-shadow .18s;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:12
-      }
-      #camControls::-webkit-scrollbar{display:none}
-      #camControls::before{content:"≡";display:block;text-align:center;color:#ffd6d6;opacity:.95;font-weight:800;font-size:10px;margin-bottom:6px;padding:4px 0;border-radius:10px;border:1px solid var(--panel-bد);background:#3a0c0caa}
-      #camControls:hover,#camControls.expanded{width:150px}
-      #camControls button{display:flex;align-items:center;justify-content:flex-start;gap:8px;border-radius:12px;padding:8px 10px;width:100%;font-size:10px;background:#1a1f2a;color:#fff;border:1px solid #ffffff1f;box-shadow:inset 0 0 0 1px #0003;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      #camControls:not(.expanded):not(:hover) button{padding:8px 6px}
-      #camControls:not(.expanded):not(:hover) button span{display:none}
-      #camControls button>span{display:inline}
-    }
-
-    /* حاوية التسخين */
+    .swap-enter{opacity:0;transition:opacity .18s ease}.swap-enter.swap-enter-active{opacity:1}
+    @media (orientation: landscape) and (max-width: 900px){#mainPreview{width:32%;height:30%;right:18px;top:14px;border-radius:18px}.hint{display:none}#camControls{top:50%;left:8px;bottom:auto;transform:translateY(-50%);flex-direction:column;align-items:stretch;padding:8px;gap:6px}#camControls button{min-width:86px;font-size:10px;padding:8px 10px;border-radius:10px}#globalControls{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);left:50%;transform:translateX(-50%);min-width:260px}#scrub{width:220px}}
+    @media (orientation: portrait){#mainPreview{top:12px;right:14px;width:58vw;height:36vh;border-radius:18px}#globalControls{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);left:50%;transform:translateX(-50%);width:min(94vw,560px);padding:8px 10px;z-index:9999}#scrub{width:clamp(140px,56vw,380px)}#camControls{top:60px;left:6px;right:auto;bottom:auto;transform:none;display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:8px 6px;max-height:58vh;overflow:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,#0b0b0fb3,#0b0b0f99);border:1px solid var(--panel-bد);border-radius:14px;width:46px;transition:width .18s,box-shadow .18s;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:12}#camControls::-webkit-scrollbar{display:none}#camControls::before{content:"≡";display:block;text-align:center;color:#ffd6d6;opacity:.95;font-weight:800;font-size:10px;margin-bottom:6px;padding:4px 0;border-radius:10px;border:1px solid var(--panel-bد);background:#3a0c0caa}#camControls:hover,#camControls.expanded{width:150px}#camControls button{display:flex;align-items:center;justify-content:flex-start;gap:8px;border-radius:12px;padding:8px 10px;width:100%;font-size:10px;background:#1a1f2a;color:#fff;border:1px solid #ffffff1f;box-shadow:inset 0 0 0 1px #0003;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#camControls:not(.expanded):not(:hover) button{padding:8px 6px}#camControls:not(.expanded):not(:hover) button span{display:none}#camControls button>span{display:inline}}
     #preloadBin{position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;overflow:hidden;pointer-events:none;opacity:0}
   </style>
 </head>
 <body>
   <div id="playerContainer" aria-label="مشغّل متعدد الكاميرات">
     <canvas id="freezeLayer"></canvas>
-
     <div id="activeCam" class="videoFrame" aria-label="الكاميرا النشطة"></div>
     <div id="mainPreview" class="videoFrame" title="انقر للتكبير/التصغير" aria-label="المعاينة الرئيسية المصغّرة"></div>
     <div class="hint">انقر على المعاينة للتكبير • أو اضغط F</div>
@@ -235,11 +137,12 @@
   <!-- التسخين خارج الشاشة -->
   <div id="preloadBin" aria-hidden="true"></div>
 
+  <!-- مصادر البث -->
   <script>
-    /* مصادر البث — Playback IDs من Mux */
+    /* Playback IDs من Mux التي زوّدتني بها */
     window.sources = {
       main:  "https://stream.mux.com/jIy7RfNkNJqkZ1008eyc01WH9i4Nh37Q001xqZEdA50000LI.m3u8",
-      cam1:  "", /* غير متوفّرة */
+      cam1:  "", /* غير متوفّرة حاليًا */
       cam2:  "https://stream.mux.com/pp5DAu5IEgXKGPYByNtH23eb3q7wQrCKjWZYQ02h02Rnc.m3u8",
       cam3:  "", /* غير متوفّرة */
       cam4:  "https://stream.mux.com/lQPRUXI5ej9dYmgBSy8YYZ6q7H9Rz2hquw8hWULlefA.m3u8",
@@ -250,57 +153,30 @@
   </script>
 
   <script>
-    /* ========= HLS: إعدادات مُسرَّعة وأكثر ثباتًا ========= */
+    /* ========= إعدادات HLS + حواجز الأمان ========= */
     const downlinkMbps = (navigator.connection && navigator.connection.downlink) ? navigator.connection.downlink : 2.5;
-
     const HLS_CONFIG = {
-      lowLatencyMode: false,
-      startPosition: -1,
-      liveSyncDuration: 4,
-      liveMaxLatencyDuration: 18,
-      maxLiveSyncPlaybackRate: 1.15,
-      capLevelToPlayerSize: true,
-      maxBufferLength: 18,
-      backBufferLength: 30,
-      maxFragLookUpTolerance: 0.25,
-      maxBufferHole: 0.5,
-      enableWorker: true,
-      progressive: true,
-      abrEwmaDefaultEstimate: Math.max(500_000, Math.min(2_500_000, downlinkMbps * 500_000)),
-      abrMaxWithRealBitrate: true,
-      fragLoadingMaxRetry: 6,
-      manifestLoadingMaxRetry: 6,
-      levelLoadingMaxRetry: 5,
-      fragLoadingRetryDelay: 450,
-      manifestLoadingRetryDelay: 650,
-      levelLoadingRetryDelay: 650,
-      fragLoadingTimeOut: 10000,
-      manifestLoadingTimeOut: 8000,
-      levelLoadingTimeOut: 8000,
-      xhrSetup: (xhr) => { try{ xhr.withCredentials=false; }catch(e){} }
+      lowLatencyMode:false,startPosition:-1,liveSyncDuration:4,liveMaxLatencyDuration:18,maxLiveSyncPlaybackRate:1.15,
+      capLevelToPlayerSize:true,maxBufferLength:18,backBufferLength:30,maxFragLookUpTolerance:0.25,maxBufferHole:0.5,
+      enableWorker:true,progressive:true,abrEwmaDefaultEstimate:Math.max(500_000,Math.min(2_500_000,downlinkMbps*500_000)),
+      abrMaxWithRealBitrate:true,fragLoadingMaxRetry:6,manifestLoadingMaxRetry:6,levelLoadingMaxRetry:5,
+      fragLoadingRetryDelay:450,manifestLoadingRetryDelay:650,levelLoadingRetryDelay:650,
+      fragLoadingTimeOut:10000,manifestLoadingTimeOut:8000,levelLoadingTimeOut:8000,
+      xhrSetup:(xhr)=>{try{xhr.withCredentials=false;}catch(e){}}
     };
+    const withJitter = (b)=> b + Math.floor(Math.random()*180);
 
-    const withJitter = (base) => base + Math.floor(Math.random()*180);
-
-    async function isCodecSupported(codec) {
-      if (navigator.mediaCapabilities && navigator.mediaCapabilities.decodingInfo) {
-        try {
-          const info = await navigator.mediaCapabilities.decodingInfo({
-            type: 'file',
-            video: { contentType: `video/mp4; codecs="${codec}"`, width: 1920, height: 1080, bitrate: 3_000_000, framerate: 30 }
-          });
+    async function isCodecSupported(codec){
+      if(navigator.mediaCapabilities?.decodingInfo){
+        try{
+          const info=await navigator.mediaCapabilities.decodingInfo({type:'file',video:{contentType:`video/mp4; codecs="${codec}"`,width:1920,height:1080,bitrate:3_000_000,framerate:30}});
           return !!info.supported;
-        } catch (e) {}
+        }catch(e){}
       }
-      const v = document.createElement('video');
-      return !!v.canPlayType(`video/mp4; codecs="${codec}"`);
+      const v=document.createElement('video'); return !!v.canPlayType(`video/mp4; codecs="${codec}"`);
     }
-
-    const SUPPORTS = { avc: null, hevc: null };
-    (async ()=>{
-      SUPPORTS.avc  = await isCodecSupported('avc1.640028') || await isCodecSupported('avc1.4d401f') || await isCodecSupported('avc1.42E01E');
-      SUPPORTS.hevc = await isCodecSupported('hvc1.1.6.L93.B0') || await isCodecSupported('hev1.1.6.L93.B0');
-    })();
+    const SUPPORTS={avc:null,hevc:null};
+    (async()=>{SUPPORTS.avc=await isCodecSupported('avc1.640028')||await isCodecSupported('avc1.4d401f')||await isCodecSupported('avc1.42E01E'); SUPPORTS.hevc=await isCodecSupported('hvc1.1.6.L93.B0')||await isCodecSupported('hev1.1.6.L93.B0');})();
 
     function pickPlayableLevel(levels){
       let i=levels.findIndex(l=>/avc1/i.test(l?.codecs||l?.codecsVideo||'')); if(i>=0 && SUPPORTS.avc) return i;
@@ -308,8 +184,35 @@
       return levels?.length?0:-1;
     }
 
-    /* تتبع PDT + تعافي هادئ */
+    const hasUrl = (u)=> typeof u==='string' && /^https?:\/\/.+/.test(u);
+
+    /* تتبّع PDT */
     const SYNC={ main:{pdtOffset:null}, active:{pdtOffset:null} };
+
+    /* ====== attachRecovery المحسّنة ====== */
+    function hasBufferedAround(video, pad = 0.08){
+      try{
+        const t = video.currentTime || 0, r = video.buffered;
+        if(!r || !r.length) return false;
+        for(let i=0;i<r.length;i++){ const s=r.start(i), e=r.end(i); if(t>=s-pad && t<=e+pad) return true; }
+      }catch(e){}
+      return false;
+    }
+    function findNextBufferedStart(video){
+      try{
+        const t = video.currentTime || 0, r = video.buffered;
+        if(!r || !r.length) return null;
+        for(let i=0;i<r.length;i++){ const s=r.start(i), e=r.end(i); if(t < s) return s+0.04; if(t>=s && t<=e) return null; }
+      }catch(e){}
+      return null;
+    }
+    async function healGapIfNeeded(video){
+      if(hasBufferedAround(video)) return false;
+      const next = findNextBufferedStart(video);
+      if(next==null) return false;
+      try{ if('setCurrentTime' in video) await video.setCurrentTime(next).catch(()=>{}); else video.currentTime=next; await video.play().catch(()=>{}); return true; }catch(e){}
+      return false;
+    }
 
     function attachRecovery(hls, video, role){
       hls.on(Hls.Events.MANIFEST_PARSED,(_,data)=>{ try{
@@ -319,59 +222,56 @@
       }catch(e){} });
 
       hls.on(Hls.Events.LEVEL_UPDATED,(_,data)=>{
-        if(data?.details?.live) { hls.latencyController?.computeLivePosition?.(); }
+        if(data?.details?.live){ hls.latencyController?.computeLivePosition?.(); }
+        healGapIfNeeded(video);
       });
 
       hls.on(Hls.Events.FRAG_CHANGED,(_,data)=>{
-        const pdtMs=data?.frag?.programDateTime; if(!pdtMs) return;
-        const off = pdtMs/1000 - (video.currentTime||0);
-        if(isFinite(off)) SYNC[role].pdtOffset = off;
+        const pdtMs=data?.frag?.programDateTime;
+        if(pdtMs){
+          const off = pdtMs/1000 - (video.currentTime||0);
+          if(isFinite(off)) SYNC[role].pdtOffset = off;
+        }
       });
 
       hls.on(Hls.Events.ERROR,(_,err)=>{
         const d=err||{};
-        if(d.type===Hls.ErrorTypes.NETWORK_ERROR){
-          try{ setTimeout(()=>hls.startLoad(0), withJitter(120)); }catch(e){}
+        const isNet = d.type===Hls.ErrorTypes.NETWORK_ERROR;
+        const details = String(d.details||'');
+
+        if (isNet){
+          try{ hls.stopLoad(); }catch(e){}
+          try{ hls.startLoad(0); }catch(e){}
+          healGapIfNeeded(video);
           return;
         }
-        if(d.details && /(DECODE|BUFFER|FRAG_PARSING|MANIFEST_INCOMPATIBLE_CODECS)/i.test(String(d.details))){
+        if (/(BUFFER_|FRAG_PARSING|DECODE|MANIFEST_INCOMPATIBLE_CODECS)/i.test(details)){
+          try{ hls.immediateLevelSwitch && hls.immediateLevelSwitch(); }catch(e){}
           try{ hls.swapAudioCodec?.(); hls.recoverMediaError?.(); }catch(e){}
+          healGapIfNeeded(video);
           return;
         }
-        if(d.fatal){ try{ hls.recoverMediaError?.(); }catch(e){} }
+        if (d.fatal){ try{ hls.recoverMediaError?.(); }catch(e){} }
       });
 
-      const nudge=()=>{
-        try{
-          const r=video.seekable;
-          if(r&&r.length){
-            const ct=video.currentTime||0, end=r.end(r.length-1);
-            const t = Math.min(end-0.05, ct+0.18);
-            if(Math.abs(t-ct)>0.01) video.currentTime=t;
-          }
-          hls.startLoad(0); video.play().catch(()=>{});
-        }catch(e){}
-      };
-
-      const onWaiting = ()=> nudge();
+      const onWaiting = ()=> healGapIfNeeded(video);
       video.addEventListener('waiting', onWaiting);
       video.addEventListener('stalled', onWaiting);
 
-      let lastT=0, stuck=0;
+      let lastT=0, still=0;
       const poll = () => {
         const t=video.currentTime||0;
         if(video.readyState>=2 && !video.paused){
-          if(Math.abs(t-lastT)<0.02){ if(++stuck>=2){ stuck=0; nudge(); } }
-          else stuck=0;
+          if(Math.abs(t-lastT)<0.02){ if(++still>=2){ still=0; healGapIfNeeded(video); } }
+          else still=0;
           lastT=t;
         }
       };
-
       if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
         const loop = () => { try{ poll(); video.requestVideoFrameCallback(loop);}catch(e){} };
-        try{ video.requestVideoFrameCallback(loop);}catch(e){ setInterval(poll, 2000); }
+        try{ video.requestVideoFrameCallback(loop);}catch(e){ setInterval(poll, 1500); }
       } else {
-        setInterval(poll, 2000);
+        setInterval(poll, 1500);
       }
     }
 
@@ -398,15 +298,11 @@
     let mainPlayer, activePlayer, currentCam="cam1";
     let splitMode=0, isMainFull=false, fillMode=false, started=false, inited=false;
 
-    /* حواجز أمان للمصادر */
-    const hasUrl = (u)=> typeof u==='string' && /^https?:\/\/.+/.test(u);
-
     function clampToSeekable(video,t){
       const r=video.seekable; if(!r||!r.length) return t;
       const start=r.start(r.length-1), end=r.end(r.length-1);
       return Math.min(Math.max(t, start+0.05), end-0.05);
     }
-
     function pdtAlignedTarget(mainCt){
       const offM = SYNC.main.pdtOffset, offA = SYNC.active.pdtOffset;
       if(offM!=null && offA!=null) return (offM + (mainCt||0)) - offA;
@@ -416,17 +312,10 @@
     /* تجميد/إذابة */
     function freezeFrom(video){
       try{
-        const w = root.clientWidth, h = root.clientHeight;
-        freezeLayer.width = w; freezeLayer.height = h;
-        const ctx = freezeLayer.getContext('2d');
-        ctx.fillStyle = '#000'; ctx.fillRect(0,0,w,h);
-        const rect = (video.getBoundingClientRect && video.parentElement) ? video.parentElement.getBoundingClientRect() : {width:w,height:h,left:0,top:0};
-        const scaleX = w / rect.width, scaleY = h / rect.height;
-        ctx.save();
-        ctx.scale(scaleX, scaleY);
-        ctx.drawImage(video, 0, 0, rect.width, rect.height);
-        ctx.restore();
-        freezeLayer.style.opacity = '1';
+        const w=root.clientWidth,h=root.clientHeight; freezeLayer.width=w; freezeLayer.height=h;
+        const ctx=freezeLayer.getContext('2d'); ctx.fillStyle='#000'; ctx.fillRect(0,0,w,h);
+        const rect=(video.getBoundingClientRect && video.parentElement)?video.parentElement.getBoundingClientRect():{width:w,height:h,left:0,top:0};
+        const scaleX=w/rect.width, scaleY=h/rect.height; ctx.save(); ctx.scale(scaleX,scaleY); ctx.drawImage(video,0,0,rect.width,rect.height); ctx.restore(); freezeLayer.style.opacity='1';
       }catch(e){}
     }
     function unfreeze(){ freezeLayer.style.opacity='0'; }
@@ -436,35 +325,22 @@
       container.appendChild(wrapper); requestAnimationFrame(()=>wrapper.classList.add('swap-enter-active'));
 
       const video=document.createElement('video');
-      video.autoplay=false; video.playsInline=true; video.controls=false; video.muted=true;
-      video.preload='auto'; video.crossOrigin='anonymous';
-      video.style.width='100%'; video.style.height='100%';
-      video.style.objectFit=((splitMode===2||fillMode)?'cover':'contain');
+      video.autoplay=false; video.playsInline=true; video.controls=false; video.muted=true; video.preload='auto'; video.crossOrigin='anonymous';
+      video.style.width='100%'; video.style.height='100%'; video.style.objectFit=((splitMode===2||fillMode)?'cover':'contain');
       wrapper.appendChild(video);
 
-      // حماية: لا نحاول التحميل إذا الرابط غير صالح
       if (!hasUrl(url)) { console.warn('No valid URL for role:', role); return video; }
 
-      const useHlsJs = () => (window.Hls && Hls.isSupported());
+      const useHlsJs=()=> (window.Hls && Hls.isSupported());
 
       if(/\.m3u8(\?|$)/i.test(url)){
         if(video.canPlayType('application/vnd.apple.mpegURL')){
           video.src=url;
           monitorWithMuxData(video, (role==='main'?'main':currentCam), null);
         }else if(useHlsJs()){
-          const cfg = {...HLS_CONFIG};
-          const hls=new Hls(cfg);
-          video.__hls=hls;
-          hls.attachMedia(video);
-          hls.on(Hls.Events.MANIFEST_PARSED,(_,data)=>{
-            const idx=pickPlayableLevel(data?.levels||[]);
-            if(idx>=0){ hls.startLevel=idx; hls.currentLevel=idx; hls.nextLevel=idx; }
-            if (navigator.connection && navigator.connection.downlink) {
-              const mbps = navigator.connection.downlink;
-              const cap = data.levels.findIndex(l=> (l.height||0) >= (mbps<3?480:(mbps<4?1080:1920)) );
-              if(cap>0) hls.autoLevelCapping = Math.max(0, cap-1);
-            }
-          });
+          const cfg={...HLS_CONFIG}; const hls=new Hls(cfg); video.__hls=hls; hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED,(_,data)=>{ const idx=pickPlayableLevel(data?.levels||[]); if(idx>=0){ hls.startLevel=idx; hls.currentLevel=idx; hls.nextLevel=idx; }
+            if(navigator.connection?.downlink){ const mbps=navigator.connection.downlink; const cap=data.levels.findIndex(l=>(l.height||0)>=(mbps<3?480:(mbps<4?1080:1920))); if(cap>0) hls.autoLevelCapping=Math.max(0,cap-1); }});
           hls.loadSource(url);
           attachRecovery(hls, video, role);
           monitorWithMuxData(video, (role==='main'?'main':currentCam), hls);
@@ -494,7 +370,7 @@
       try{ node.remove(); }catch(e){}
     }
 
-    /* تموضع utilityControls */
+    /* تموضع لوحة الأدوات */
     function positionUtilityDock(){
       if(root.classList.contains('main-full')){ utilityControls.style.display='none'; return; }
       utilityControls.style.display='flex';
@@ -503,8 +379,8 @@
         utilityControls.classList.add('vertical'); utilityControls.classList.remove('horizontal');
         requestAnimationFrame(()=>{
           const cr=utilityControls.getBoundingClientRect();
-          let left=r.left - cr.width - m; if(left<m) left=m;
-          let top =r.top + (r.height-cr.height)/2; top=Math.max(m, Math.min(top, window.innerHeight-cr.height-m));
+          let left=r.left-cr.width-m; if(left<m) left=m;
+          let top=r.top+(r.height-cr.height)/2; top=Math.max(m, Math.min(top, window.innerHeight-cr.height-m));
           utilityControls.style.left=left+'px'; utilityControls.style.right='auto'; utilityControls.style.top=top+'px';
         });
       }else{
@@ -515,7 +391,6 @@
     window.addEventListener('resize', positionUtilityDock);
     window.addEventListener('orientationchange', ()=>setTimeout(positionUtilityDock,120));
 
-    /* عرض/تحكم */
     function applySplitClasses(){
       root.classList.toggle('split',splitMode!==0);
       root.classList.toggle('fill',(splitMode!==0&&(splitMode===2||fillMode)));
@@ -533,15 +408,9 @@
     async function playEntity(ent, muted=true){ try{ ent.muted=!!muted; await ent.play(); }catch(e){} }
     async function startPlayback(){
       if(started) return;
-      started=true;
-      gatePlay.classList.add('hidden');
-      globalControls.classList.remove('hidden');
-      await playEntity(mainPlayer,true);
-      await playEntity(activePlayer,true);
-      setTimeout(syncCams,220);
-      positionUtilityDock();
-      startTimeTicker();
-      reflectSoundState();
+      started=true; gatePlay.classList.add('hidden'); globalControls.classList.remove('hidden');
+      await playEntity(mainPlayer,true); await playEntity(activePlayer,true);
+      setTimeout(syncCams,220); positionUtilityDock(); startTimeTicker(); reflectSoundState();
     }
 
     // زمن/مدة
@@ -586,21 +455,14 @@
     }
     async function jumpBy(d){ const t=await getMainTime(); const dmax=await getMainDuration(); let nt=(t||0)+d; if(dmax&&isFinite(dmax)) nt=Math.min(Math.max(0,nt),dmax); await seekMainTo(nt); await seekActiveTo(pdtAlignedTarget(nt)); }
 
-    /* تبديل الكاميرات — Freeze + مزامنة قبل الإظهار */
+    /* تبديل الكاميرات */
     function switchCam(cam, btn){
-      // لو الزر لكاميرا بلا رابط، تجاهل
       if (!hasUrl(window.sources[cam])) return;
-
       currentCam=cam; if(btn){ btn.classList.add('btn-loading'); setTimeout(()=>btn.classList.remove('btn-loading'),1200); }
-
       const currentVid = camContainer.querySelector('video') || mainContainer.querySelector('video');
       if(currentVid) freezeFrom(currentVid);
-
       const newcomer=createVideo(camContainer, sources[cam], 'active');
-      const promote=async()=>{
-        activePlayer=newcomer; await playEntity(activePlayer,true);
-        const mt=await getMainTime(); await seekActiveTo(pdtAlignedTarget(mt));
-      };
+      const promote=async()=>{ activePlayer=newcomer; await playEntity(activePlayer,true); const mt=await getMainTime(); await seekActiveTo(pdtAlignedTarget(mt)); };
       if(newcomer instanceof HTMLVideoElement){ newcomer.addEventListener('canplay',promote,{once:true}); newcomer.play().catch(()=>{}); } else { promote(); }
     }
 
@@ -610,13 +472,11 @@
     btnFill.addEventListener('click',  ()=>{ toggleFillMode();  positionUtilityDock(); });
     btnSound.addEventListener('click', toggleSound);
     mainContainer.addEventListener('click', ()=>{ if(splitMode===0){ toggleMainZoom(); positionUtilityDock(); }});
-
     gPlay.addEventListener('click', togglePlayPause);
     gBack.addEventListener('click', ()=>jumpBy(-5));
     gFwd .addEventListener('click', ()=>jumpBy(+5));
     scrub.addEventListener('input', ()=>{ isScrubbing=true; });
     scrub.addEventListener('change', async()=>{ const nt=parseFloat(scrub.value)||0; await seekMainTo(nt); await seekActiveTo(pdtAlignedTarget(nt)); isScrubbing=false; });
-
     camControls.addEventListener('click',(e)=>{ const b=e.target.closest('button[data-cam]'); if(!b) return; switchCam(b.getAttribute('data-cam'), b); });
 
     document.addEventListener('keydown',(e)=>{
@@ -630,30 +490,15 @@
     function warmFetch(url){ if(!hasUrl(url)) return; try{ fetch(url, {mode:'no-cors', cache:'reload'}).catch(()=>{}); }catch(e){} }
     const warmList = Object.values(window.sources).filter(hasUrl);
 
-    function eagerInitMain(){
-      if(mainPlayer) return;
-      mainPlayer = createVideo(mainContainer, sources.main, 'main');
-      if(mainPlayer.__hls){ try{ mainPlayer.__hls.startLoad(0); }catch(e){} }
-      setTimeout(()=>{ try{ mainPlayer.load?.(); }catch(e){} }, 600);
-    }
-
+    function eagerInitMain(){ if(mainPlayer) return; mainPlayer = createVideo(mainContainer, sources.main, 'main'); if(mainPlayer.__hls){ try{ mainPlayer.__hls.startLoad(0); }catch(e){} } setTimeout(()=>{ try{ mainPlayer.load?.(); }catch(e){} }, 600); }
     function eagerInitActive(){
-      // اختر أول كاميرا معرفة
       const ids = Object.keys(sources).filter(k=>k!=='main' && hasUrl(sources[k]));
       if(ids.length){ currentCam = ids[0]; }
-      // أخفِ الأزرار غير المعرفة
-      document.addEventListener('DOMContentLoaded', ()=>{
-        document.querySelectorAll('#camControls [data-cam]').forEach(btn=>{
-          const id=btn.getAttribute('data-cam');
-          if(id!=='cam1' && !hasUrl(sources[id])) btn.style.display='none';
-        });
-      });
-
+      document.addEventListener('DOMContentLoaded', ()=>{ document.querySelectorAll('#camControls [data-cam]').forEach(btn=>{ const id=btn.getAttribute('data-cam'); if(id!=='cam1' && !hasUrl(sources[id])) btn.style.display='none'; }); });
       if(activePlayer) return;
       activePlayer = createVideo(camContainer, sources[currentCam], 'active');
       if(activePlayer.__hls){ try{ activePlayer.__hls.startLoad(0); }catch(e){} }
     }
-
     function initPlayersOnce(){ if(inited) return; inited=true; eagerInitMain(); eagerInitActive(); setTimeout(()=>warmList.forEach(warmFetch), 120); }
 
     window.onYouTubeIframeAPIReady=()=>{ initPlayersOnce(); };
@@ -662,228 +507,125 @@
     (function autoUi(){ let t=null; const wake=()=>{ document.body.classList.add('ui-awake'); clearTimeout(t); t=setTimeout(()=>document.body.classList.remove('ui-awake'), 1800); }; ['mousemove','touchstart','touchmove','keydown','click'].forEach(ev=>window.addEventListener(ev,wake,{passive:true})); wake();})();
   </script>
 
-  <!-- ======== إضافة: مُدير المزامنة والمرايا المخفية ======== -->
+  <!-- ======== مدير المزامنة + مرايا مخفية + ربط Mux Data ======== -->
   <script>
-  // ===[ 1) تجميع معلومات التزامن لكل دفق ]===
-  const STREAM_META = {}; // { camId: { pdt: seconds|null, sn: number|null, targetDur: number|null } }
+  const STREAM_META = {};
 
   function trackHlsMeta(hls, roleId){
     STREAM_META[roleId] ??= { pdt:null, sn:null, targetDur:null };
-    hls.on(Hls.Events.LEVEL_UPDATED,(_,data)=>{
-      try{ STREAM_META[roleId].targetDur = data?.details?.targetduration || STREAM_META[roleId].targetDur; }catch(e){}
-    });
-    hls.on(Hls.Events.FRAG_CHANGED,(_,data)=>{
-      try{
-        const frag=data?.frag;
-        if(!frag) return;
-        STREAM_META[roleId].sn = frag.sn ?? STREAM_META[roleId].sn;
-        STREAM_META[roleId].pdt = (frag.programDateTime ? frag.programDateTime/1000 : STREAM_META[roleId].pdt);
-      }catch(e){}
-    });
+    hls.on(Hls.Events.LEVEL_UPDATED,(_,data)=>{ try{ STREAM_META[roleId].targetDur = data?.details?.targetduration || STREAM_META[roleId].targetDur; }catch(e){} });
+    hls.on(Hls.Events.FRAG_CHANGED,(_,data)=>{ try{ const frag=data?.frag; if(!frag) return; STREAM_META[roleId].sn = frag.sn ?? STREAM_META[roleId].sn; STREAM_META[roleId].pdt = (frag.programDateTime ? frag.programDateTime/1000 : STREAM_META[roleId].pdt); }catch(e){} });
   }
 
-  const _attachRecoveryOrig = attachRecovery;
-  attachRecovery = function(hls, video, role){
-    _attachRecoveryOrig(hls, video, role);
-    // سيتم وسم hls باسم الكاميرا الحقيقي عبر createVideo hook
-  };
-
-  // ===[ 2) مُدير المزامنة ]===
   class SyncManager {
-    constructor(){
-      this.loop = null;
-      this.hiddenPool = {}; // { camId: { video, hls } }
-      this.desiredRateResetTimers = new WeakMap();
-      this._activeTrackedFor = {};
-    }
-
+    constructor(){ this.loop=null; this.hiddenPool={}; this.desiredRateResetTimers=new WeakMap(); this._activeTrackedFor={}; this._mainTracked=false; }
     computeTargetFor(camId, mainTime){
-      const mainMeta = STREAM_META['main'];
-      const camMeta  = STREAM_META[camId];
-
-      if(mainMeta?.pdt!=null && camMeta?.pdt!=null){
-        const offset = (mainMeta.pdt - camMeta.pdt);
-        return mainTime + offset;
-      }
-      if(mainMeta?.sn!=null && camMeta?.sn!=null && (camMeta.targetDur||mainMeta.targetDur)){
-        const td = camMeta.targetDur || mainMeta.targetDur || 4;
-        const snDiff = (mainMeta.sn - camMeta.sn);
-        return mainTime + (snDiff * td);
-      }
+      const mainMeta=STREAM_META['main'], camMeta=STREAM_META[camId];
+      if(mainMeta?.pdt!=null && camMeta?.pdt!=null){ const offset=(mainMeta.pdt-camMeta.pdt); return mainTime + offset; }
+      if(mainMeta?.sn!=null && camMeta?.sn!=null && (camMeta.targetDur||mainMeta.targetDur)){ const td=camMeta.targetDur||mainMeta.targetDur||4; const snDiff=(mainMeta.sn-camMeta.sn); return mainTime + (snDiff*td); }
       return mainTime;
     }
-
-    gentlyChase(video, delta){
-      const ad = Math.abs(delta);
-      const want = (delta > 0 ? 0.95 : 1.05);
-      if(ad < 0.06){ this.setPlaybackRate(video, 1); return; }
-      if(ad < 0.50){ this.setPlaybackRate(video, want); return; }
-      this.setPlaybackRate(video, 1);
-    }
-
-    setPlaybackRate(video, rate){
-      try{
-        if(Math.abs((video.playbackRate||1)-rate)<0.005) return;
-        video.playbackRate = rate;
-        clearTimeout(this.desiredRateResetTimers.get(video));
-        const t = setTimeout(()=>{ try{ video.playbackRate = 1; }catch(e){} }, 1200);
-        this.desiredRateResetTimers.set(video, t);
-      }catch(e){}
-    }
-
+    gentlyChase(video, delta){ const ad=Math.abs(delta); const want=(delta>0?0.95:1.05); if(ad<0.06){ this.setPlaybackRate(video,1); return; } if(ad<0.50){ this.setPlaybackRate(video,want); return; } this.setPlaybackRate(video,1); }
+    setPlaybackRate(video, rate){ try{ if(Math.abs((video.playbackRate||1)-rate)<0.005) return; video.playbackRate=rate; clearTimeout(this.desiredRateResetTimers.get(video)); const t=setTimeout(()=>{ try{ video.playbackRate=1; }catch(e){} },1200); this.desiredRateResetTimers.set(video,t);}catch(e){} }
+    async forceRealign(video, target){ await this.seekVideoTo(video, target); await healGapIfNeeded(video); }
     async seekVideoTo(video, target){
       try{
-        const r=video.seekable; 
-        if(r&&r.length){
-          const start=r.start(r.length-1), end=r.end(r.length-1);
-          target = Math.min(Math.max(target, start+0.05), end-0.05);
-        }
-        if ('setCurrentTime' in video) { await video.setCurrentTime(target).catch(()=>{}); return; }
-        video.currentTime = target;
+        const r=video.seekable; if(r&&r.length){ const start=r.start(r.length-1), end=r.end(r.length-1); target=Math.min(Math.max(target,start+0.05), end-0.05); }
+        if('setCurrentTime' in video){ await video.setCurrentTime(target).catch(()=>{}); return; }
+        video.currentTime=target;
       }catch(e){}
     }
-
     start(){
       if(this.loop) return;
-      const tick = async () => {
+      const tick=async()=>{
         try{
           if(!mainPlayer) return;
-          const mainTime = await getMainTime();
-          if(activePlayer){
-            const camId = currentCam;
-            const target = this.computeTargetFor(camId, mainTime);
-            const delta  = (activePlayer.currentTime||0) - target;
+          const mainTime=await getMainTime();
 
-            if(Math.abs(delta) > 0.50){
-              await this.seekVideoTo(activePlayer, target);
-            } else {
-              this.gentlyChase(activePlayer, delta);
-            }
+          if(activePlayer){
+            const camId=currentCam;
+            const target=this.computeTargetFor(camId, mainTime);
+            let delta=(activePlayer.currentTime||0)-target;
+            if(!hasBufferedAround(activePlayer)) await healGapIfNeeded(activePlayer);
+            if(Math.abs(delta)>1.25){ await this.forceRealign(activePlayer, target); } else { this.gentlyChase(activePlayer, delta); }
+            if(hasBufferedAround(activePlayer)){ (this.hiddenPool[camId] ??= {}).lastOkTs = performance.now(); }
           }
+
           for(const camId of Object.keys(this.hiddenPool)){
-            const node = this.hiddenPool[camId];
-            if(!node?.video) continue;
-            const target = this.computeTargetFor(camId, mainTime);
-            const v = node.video;
-            const d = (v.currentTime||0) - target;
-            if(Math.abs(d) > 0.75){
-              await this.seekVideoTo(v, target);
-            } else {
-              this.gentlyChase(v, d);
-            }
+            const node=this.hiddenPool[camId]; const v=node.video; if(!v) continue;
+            const target=this.computeTargetFor(camId, mainTime);
+            let d=(v.currentTime||0)-target;
+            if(!hasBufferedAround(v)){
+              const healed=await healGapIfNeeded(v);
+              if(!healed){ const lastOk=node.lastOkTs||0; if(performance.now()-lastOk>4000){ try{ node.hls?.stopLoad?.(); node.hls?.destroy?.(); }catch(e){} delete this.hiddenPool[camId]; continue; } }
+            } else { node.lastOkTs=performance.now(); }
+            if(Math.abs(d)>1.5){ await this.forceRealign(v, target); } else { this.gentlyChase(v, d); }
           }
         }catch(e){}
-        this.loop = requestAnimationFrame(tick);
+        this.loop=requestAnimationFrame(tick);
       };
-      this.loop = requestAnimationFrame(tick);
+      this.loop=requestAnimationFrame(tick);
     }
     stop(){ if(this.loop){ cancelAnimationFrame(this.loop); this.loop=null; } }
-
     ensureHiddenMirrors(){
-      const ids = Object.keys(sources).filter(k=>k!=='main' && hasUrl(sources[k]));
+      const ids=Object.keys(sources).filter(k=>k!=='main' && hasUrl(sources[k]));
       ids.forEach(id=>{
         if(this.hiddenPool[id]) return;
         const wrap=document.createElement('div'); wrap.style.width='1px'; wrap.style.height='1px'; wrap.style.overflow='hidden';
         const v=document.createElement('video'); v.muted=true; v.playsInline=true; v.preload='auto'; v.style.width='1px'; v.style.height='1px';
         wrap.appendChild(v); preloadBin.appendChild(wrap);
-
-        const cfg = {...HLS_CONFIG, maxBufferLength: 8, backBufferLength: 10};
-        const hls = (window.Hls && Hls.isSupported()) ? new Hls(cfg) : null;
-        if(hls){
-          hls.attachMedia(v);
-          hls.on(Hls.Events.MEDIA_ATTACHED,()=>{
-            hls.loadSource(sources[id]);
-            trackHlsMeta(hls, id);
-          });
-        } else {
-          v.src = sources[id];
-        }
+        const cfg={...HLS_CONFIG, maxBufferLength:8, backBufferLength:10};
+        const hls=(window.Hls && Hls.isSupported())? new Hls(cfg): null;
+        if(hls){ hls.attachMedia(v); hls.on(Hls.Events.MEDIA_ATTACHED,()=>{ hls.loadSource(sources[id]); trackHlsMeta(hls, id); }); } else { v.src=sources[id]; }
         v.addEventListener('loadedmetadata',()=>{ v.play().catch(()=>{}); },{once:true});
-        this.hiddenPool[id] = { video:v, hls };
+        this.hiddenPool[id]={ video:v, hls, lastOkTs: performance.now() };
       });
     }
-
     tapMainActiveHls(){
       try{
-        if(mainPlayer?.__hls && !this._mainTracked){
-          trackHlsMeta(mainPlayer.__hls, 'main');
-          this._mainTracked = true;
-        }
-        if(activePlayer?.__hls && !this._activeTrackedFor[currentCam]){
-          trackHlsMeta(activePlayer.__hls, currentCam);
-          this._activeTrackedFor[currentCam] = true;
-        }
+        if(mainPlayer?.__hls && !this._mainTracked){ trackHlsMeta(mainPlayer.__hls,'main'); this._mainTracked=true; }
+        if(activePlayer?.__hls && !this._activeTrackedFor[currentCam]){ trackHlsMeta(activePlayer.__hls,currentCam); this._activeTrackedFor[currentCam]=true; }
       }catch(e){}
     }
   }
-  const SYNC_MGR = new SyncManager();
+  const SYNC_MGR=new SyncManager();
 
-  // ===[ 3) دمج مع الشيفرة الحالية ]===
+  /* ربط المُدير مع الدوال الأصلية */
   const _startPlaybackOrig = startPlayback;
-  startPlayback = async function(){
-    await _startPlaybackOrig();
-    SYNC_MGR.ensureHiddenMirrors();
-    SYNC_MGR.tapMainActiveHls();
-    SYNC_MGR.start();
-  };
+  startPlayback = async function(){ await _startPlaybackOrig(); SYNC_MGR.ensureHiddenMirrors(); SYNC_MGR.tapMainActiveHls(); SYNC_MGR.start(); };
 
   const _createVideoOrig = createVideo;
   createVideo = function(container, url, role){
-    const video = _createVideoOrig(container, url, role);
-    const timer = setInterval(()=>{
-      try{
-        if(video && video.__hls){
-          const roleId = (role === 'main') ? 'main' : currentCam;
-          trackHlsMeta(video.__hls, roleId);
-          SYNC_MGR.tapMainActiveHls();
-          clearInterval(timer);
-        }
-      }catch(e){}
-    }, 120);
-    setTimeout(()=>clearInterval(timer), 4000);
+    const video=_createVideoOrig(container, url, role);
+    const timer=setInterval(()=>{ try{ if(video && video.__hls){ const roleId=(role==='main')?'main':currentCam; trackHlsMeta(video.__hls, roleId); SYNC_MGR.tapMainActiveHls(); clearInterval(timer);} }catch(e){} },120);
+    setTimeout(()=>clearInterval(timer),4000);
     return video;
   };
 
   const _switchCamOrig = switchCam;
-  switchCam = function(cam, btn){
-    _switchCamOrig(cam, btn);
-    setTimeout(()=>{ 
-      SYNC_MGR.tapMainActiveHls();
-    }, 500);
-  };
+  switchCam = function(cam, btn){ _switchCamOrig(cam, btn); setTimeout(()=>{ SYNC_MGR.tapMainActiveHls(); },500); };
 
   const _seekMainToOrig = seekMainTo;
   seekMainTo = async function(t){
     await _seekMainToOrig(t);
-    const mainTime = await getMainTime();
-    const target = SYNC_MGR.computeTargetFor(currentCam, mainTime);
+    const mainTime=await getMainTime();
+    const target=SYNC_MGR.computeTargetFor(currentCam, mainTime);
     await seekActiveTo(target);
     for(const camId of Object.keys(SYNC_MGR.hiddenPool)){
-      const v = SYNC_MGR.hiddenPool[camId]?.video;
+      const v=SYNC_MGR.hiddenPool[camId]?.video;
       if(v) await SYNC_MGR.seekVideoTo(v, SYNC_MGR.computeTargetFor(camId, mainTime));
     }
   };
 
-  // ====== ربط Mux Data ======
+  /* Mux Data */
   function monitorWithMuxData(video, label, hlsInstance=null){
-    if (!window.mux || !MUX_ENV_KEY) return;
-    if (video.__muxMonitorId && mux.destroyMonitor) { try { mux.destroyMonitor(video.__muxMonitorId); } catch(e){} }
-    const metadata = {
-      environment_key: MUX_ENV_KEY,
-      player_name: "Steps MultiCam Player",
-      player_version: "1.0.0",
-      video_id: label,
-      video_title: `Stream ${label}`,
-      custom_1: "multicam-sync"
-    };
-    const options = hlsInstance ? { hlsjs: hlsInstance } : undefined;
-    try { video.__muxMonitorId = mux.monitor(video, { debug:false, data:metadata }, options); } catch(e){}
+    if(!window.mux || !MUX_ENV_KEY) return;
+    if(video.__muxMonitorId && mux.destroyMonitor){ try{ mux.destroyMonitor(video.__muxMonitorId); }catch(e){} }
+    const metadata={ environment_key:MUX_ENV_KEY, player_name:"Steps MultiCam Player", player_version:"1.0.0", video_id:label, video_title:`Stream ${label}`, custom_1:"multicam-sync" };
+    const options = hlsInstance ? { hlsjs:hlsInstance } : undefined;
+    try{ video.__muxMonitorId = mux.monitor(video, { debug:false, data:metadata }, options); }catch(e){}
   }
-  function unmonitorMux(video){
-    if (video?.__muxMonitorId && window.mux?.destroyMonitor) {
-      try { mux.destroyMonitor(video.__muxMonitorId); } catch(e){}
-    }
-  }
+  function unmonitorMux(video){ if(video?.__muxMonitorId && window.mux?.destroyMonitor){ try{ mux.destroyMonitor(video.__muxMonitorId); }catch(e){} } }
   </script>
 </body>
 </html>
